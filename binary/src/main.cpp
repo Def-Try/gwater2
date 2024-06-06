@@ -66,7 +66,7 @@ LUA_FUNCTION(FLEXSOLVER_Tick) {
 	FlexSolver* flex = GET_FLEXSOLVER(1);
 	
 	// Avoid ticking if the deltatime ends up being zero, as it invalidates the simulation
-	float dt = (float)LUA->GetNumber(2) * CM_2_INCH;
+	float dt = (float)LUA->GetNumber(2) * 10;
 	if (flex->get_parameter("timescale") == 0 || dt == 0 || flex->get_active_particles() == 0) {
 		LUA->PushBool(true);
 		return 1;

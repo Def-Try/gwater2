@@ -310,7 +310,7 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params = new NvFlexParams();
 	params->gravity[0] = 0.0f;
 	params->gravity[1] = 0.0f;
-	params->gravity[2] = -15.24f;	// Source gravity (600 inch^2) in m/s^2
+	params->gravity[2] = -9.81f;	// Earth gravity
 
 	params->wind[0] = 0.0f;
 	params->wind[1] = 0.0f;

@@ -36,7 +36,7 @@ local options = {
 	-- Physics Parameters
 	Cohesion = {text = "Controls how well particles hold together.\n\nHigher values make the fluid more solid/rigid, while lower values make it more fluid and loose."},
 	Adhesion = {text = "Controls how well particles stick to surfaces.\n\nNote that this specific parameter doesn't reflect changes in the preview very well and may need to be viewed externally."},
-	Gravity = {text = "Controls how strongly fluid is pulled down. This value is measured in meters per second.\n\nNote that The default source gravity is -15.24 which is NOT the same as Earths gravity of -9.81."},
+	Gravity = {text = "Controls how strongly fluid is pulled down. This value is measured in meters per second.\n\nNote that The default gravity is -9.81."},
 	Viscosity = {text = "Controls how much particles resist movement.\n\nHigher values look more like honey or syrup, while lower values look like water or oil."},
 	Radius = {text = "Controls the size of each particle.\n\nIn the preview it is clamped to 15 to avoid weirdness.\n\nRadius is measured in source units and is the same for all particles."},
 	["Surface Tension"] = {text = "Controls how strongly particles minimize surface area.\n\nThis parameter tends to make particles behave oddly if set too high\n\nUsually bundled with cohesion."},
