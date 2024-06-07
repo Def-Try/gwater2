@@ -311,13 +311,13 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params = new NvFlexParams();
 	params->gravity[0] = 0.0f;
 	params->gravity[1] = 0.0f;
-	params->gravity[2] = -9.81f;	// Earth gravity
+	params->gravity[2] = -15.24f;	// Earth gravity * Source Units
 
 	params->wind[0] = 0.0f;
 	params->wind[1] = 0.0f;
 	params->wind[2] = 0.0f;
 
-	params->radius = 0.1f;
+	params->radius = 0.15f;
 	params->viscosity = 0.0f;
 	params->dynamicFriction = 0.5f;
 	params->staticFriction = 0.5f;
