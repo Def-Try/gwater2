@@ -152,7 +152,7 @@ void FlexRenderer::build_diffuse(FlexSolver* solver, float radius) {
 		IMesh* imesh = render_context->CreateStaticMesh(VERTEX_POSITION | VERTEX_NORMAL | VERTEX_TEXCOORD0_2D, "");
 		mesh_builder.Begin(imesh, MATERIAL_TRIANGLES, MAX_PRIMATIVES);
 		for (int primative = 0; primative < MAX_PRIMATIVES && particle_index < max_particles; particle_index++) {
-			Vector particle_pos = particle_positions[particle_index].AsVector3D() * CM_2_INCH;
+			Vector particle_pos = particle_positions[particle_index].AsVector3D();
 
 			// Frustrum culling
 			Vector4D dst;
@@ -163,7 +163,8 @@ void FlexRenderer::build_diffuse(FlexSolver* solver, float radius) {
 
 			for (int i = 0; i < 3; i++) {
 				Vector pos_ani = local_pos[i];	// Warp based on velocity
-				pos_ani = pos_ani + (particle_velocities[particle_index].AsVector3D() * pos_ani.Dot(particle_velocities[particle_index].AsVector3D()) * particle_scale).Min(Vector(3, 3, 3)).Max(Vector(-3, -3, -3));
+				Vector vel = particle_velocities[particle_index].AsVector3D() * CM_2_INCH;
+				pos_ani = pos_ani + (vel * pos_ani.Dot(vel) * particle_scale).Min(Vector(3, 3, 3)).Max(Vector(-3, -3, -3));
 
 				float lifetime = particle_positions[particle_index].w * inv_max_lifetime;	// scale bubble size by life left
 				Vector world_pos = particle_pos + pos_ani * radius * lifetime;
