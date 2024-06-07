@@ -161,12 +161,7 @@ vgui.Register("GF_ScrollPanel", GFScrollPanel, "DScrollPanel")
 local function set_gwater_parameter(option, val)
 	if gwater2[option] then
 		gwater2[option] = val
-		if option == "surface_tension" then	-- hack hack hack! this parameter scales based on radius
-			local r1 = val / gwater2.solver:GetParameter("radius")^4	-- cant think of a name for this variable rn
-			local r2 = val / math.min(gwater2.solver:GetParameter("radius"), 15)^4
-			gwater2.solver:SetParameter(option, r1)
-			options.solver:SetParameter(option, r2)
-		elseif option == "fluid_rest_distance" or option == "collision_distance" then -- hack hack hack! this parameter scales based on radius
+		if option == "fluid_rest_distance" or option == "collision_distance" then -- hack hack hack! this parameter scales based on radius
 			local r1 = val * gwater2.solver:GetParameter("radius")
 			local r2 = val * math.min(gwater2.solver:GetParameter("radius"), 15)
 			gwater2.solver:SetParameter(option, r1)
@@ -178,13 +173,11 @@ local function set_gwater_parameter(option, val)
 	gwater2.solver:SetParameter(option, val)
 
 	if option == "gravity" then val = -val end	-- hack hack hack! y coordinate is considered down in screenspace!
-	if option == "radius" then 					-- hack hack hack! radius needs to edit multiple parameters!
-		gwater2.solver:SetParameter("surface_tension", gwater2["surface_tension"] / val^4)	-- literally no idea why this is a power of 4
+	if option == "radius" then 					-- hack hack hack! radius needs to edit multiple parameters! 
 		gwater2.solver:SetParameter("fluid_rest_distance", val * gwater2["fluid_rest_distance"])
 		gwater2.solver:SetParameter("collision_distance", val * gwater2["collision_distance"])
 		
-		if val > 15 then val = 15 end	-- explody
-		options.solver:SetParameter("surface_tension", gwater2["surface_tension"] / val^4)
+		if val > 15 then val = 15 end	-- explody 
 		options.solver:SetParameter("fluid_rest_distance", val * gwater2["fluid_rest_distance"])
 		options.solver:SetParameter("collision_distance", val * gwater2["collision_distance"])
 	end
@@ -518,7 +511,7 @@ concommand.Add("gwater2_menu", function()
 		labels[4], sliders["Gravity"] = create_slider(scrollPanel, "Gravity", -30.48, 30.48, 2, 140)
 		labels[5], sliders["Viscosity"] = create_slider(scrollPanel, "Viscosity", 0, 20, 2, 170)
 		labels[6], sliders["Timescale"] = create_slider(scrollPanel, "Timescale", 0, 2, 2, 200)
-		labels[7], sliders["Surface Tension"] = create_slider(scrollPanel, "Surface Tension", 0, 1, 2, 230, 350, 10)
+		labels[7], sliders["Surface Tension"] = create_slider(scrollPanel, "Surface Tension", 0, 50, 2, 230, 350, 10)
 		
 		function scrollPanel:AnimationThink()
 			local mousex, mousey = self:LocalCursorPos()

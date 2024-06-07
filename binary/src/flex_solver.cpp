@@ -319,18 +319,18 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 
 	params->radius = 0.15f;
 	params->viscosity = 0.0f;
-	params->dynamicFriction = 0.5f;
-	params->staticFriction = 0.5f;
+	params->dynamicFriction = 0.2f;
+	params->staticFriction = 0.0f;
 	params->particleFriction = 0.0f;
 	params->freeSurfaceDrag = 0.0f;
 	params->drag = 0.0f;
-	params->lift = 1.0f;
+	params->lift = 0.0f;
 	params->numIterations = 3;
-	params->fluidRestDistance = 0.0975;
-	params->solidRestDistance = 0.0975;
+	params->fluidRestDistance = params->radius * 0.65f;
+	params->solidRestDistance = params->radius * 0.65f;
 
 	params->anisotropyScale = 1.f;
-	params->anisotropyMin = 0.1f;
+	params->anisotropyMin = 0.0f;
 	params->anisotropyMax = 2.f;
 	params->smoothing = 1.0f;
 
@@ -338,29 +338,29 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params->damping = 0.0f;
 	params->particleCollisionMargin = 0.f;
 	params->shapeCollisionMargin = 0.f;	// Increase if lots of water pressure is expected. Higher values cause more collision clipping
-	params->collisionDistance = 0.075; // Needed for tri-particle intersection
+	params->collisionDistance = params->radius * 0.5f; // Needed for tri-particle intersection
 	params->sleepThreshold = 0.1f;
 	params->shockPropagation = 0.0f;
 	params->restitution = 0.0f;
 
 	params->maxSpeed = FLT_MAX;
-	params->maxAcceleration = 200.0f;
+	params->maxAcceleration = 100.0f;
 	params->relaxationMode = eNvFlexRelaxationLocal;
-	params->relaxationFactor = 0.0f;
-	params->solidPressure = 0.5f;
+	params->relaxationFactor = 1.0f;
+	params->solidPressure = 1.0f;
 	params->adhesion = 0.0f;
-	params->cohesion = 0.01f;
-	params->surfaceTension = 19.8;
-	params->vorticityConfinement = 0.0f;
+	params->cohesion = 0.05f;
+	params->surfaceTension = 1.0f;
+	params->vorticityConfinement = 50.0f;
 	params->buoyancy = 1.0f;
 
 	params->diffuseThreshold = 100000.0f;
 	params->diffuseBuoyancy = 1.f;
 	params->diffuseDrag = 0.8f;
 	params->diffuseBallistic = 16;
-	params->diffuseLifetime = 1.f;	// not actually in seconds
+	params->diffuseLifetime = 1.f;	// yes actually in seconds
 
-	params->numPlanes = 0;
+	params->numPlanes = 5;
 
 	param_map["gravity"] = &(params->gravity[2]);
 	param_map["radius"] = &params->radius;
