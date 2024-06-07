@@ -35,6 +35,8 @@ bool solveQuadratic(float a, float b, float c, float &minT, float &maxT)
 }
 
 
+float DotInvW(Vector4D a, Vector4D b) { return a.x * b.x + a.y * b.y + a.z * b.z - a.w * b.w; }
+
 /// experimental port of anisotropy vertex shader to c++ dont use this yet
 void vertexshadermain(Vector4D q1, Vector4D q2, Vector4D q3, Vector4D worldPos)
 {
@@ -93,8 +95,6 @@ void vertexshadermain(Vector4D q1, Vector4D q2, Vector4D q3, Vector4D worldPos)
 	Vector4D ndcPos;// = gl_ModelViewProjectionMatrix * vec4(worldPos.xyz, 1.0);
 	gl_TexCoord[5] = ndcPos / ndcPos.w;
 }
-
-float DotInvW(Vector4D a, Vector4D b) { return a.x * b.x + a.y * b.y + a.z * b.z - a.w * b.w; }
 
 // lord have mercy brothers
 void FlexRenderer::build_water(FlexSolver* solver, float radius) {
