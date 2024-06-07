@@ -107,7 +107,7 @@ LUA_FUNCTION(FLEXSOLVER_AddConcaveMesh) {
 		return 0;
 	}
 
-	mesh.set_pos(pos);
+	mesh.set_pos(pos / CM_2_INCH);
 	mesh.set_ang(ang);
 	mesh.update();
 
@@ -144,7 +144,7 @@ LUA_FUNCTION(FLEXSOLVER_AddConvexMesh) {
 		return 0;
 	}
 
-	mesh.set_pos(pos);
+	mesh.set_pos(pos / CM_2_INCH);
 	mesh.set_ang(ang);
 	mesh.update();
 
@@ -202,7 +202,7 @@ LUA_FUNCTION(FLEXSOLVER_UpdateMesh) {
 	LUA->CheckType(4, Type::Angle);		// Prop Angle
 
 	FlexSolver* flex = GET_FLEXSOLVER(1);
-	flex->update_mesh(LUA->GetNumber(2), LUA->GetVector(3), LUA->GetAngle(4));
+	flex->update_mesh(LUA->GetNumber(2), LUA->GetVector(3) / CM_2_INCH, LUA->GetAngle(4));
 
 	return 0;
 }

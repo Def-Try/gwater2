@@ -694,7 +694,7 @@ concommand.Add("gwater2_menu", function()
 		labels[1], sliders["Anisotropy Min"] = create_slider(scrollPanel, "Anisotropy Min", 0, 1, 2, 50, 350, 20)
 		labels[2], sliders["Anisotropy Max"] = create_slider(scrollPanel, "Anisotropy Max", 0, 2, 2, 80, 350, 20)
 		labels[3], sliders["Anisotropy Scale"] = create_slider(scrollPanel, "Anisotropy Scale", 0, 2, 2, 110, 350, 20)
-		labels[4], sliders["Diffuse Threshold"] = create_slider(scrollPanel, "Diffuse Threshold", 1, 50000, 1, 140, 350, 20)
+		labels[4], sliders["Diffuse Threshold"] = create_slider(scrollPanel, "Diffuse Threshold", 1, 500000, 1, 140, 350, 20)
 		labels[5], sliders["Diffuse Lifetime"] = create_slider(scrollPanel, "Diffuse Lifetime", 0, 5, 1, 170, 350, 20)
 		labels[6], sliders["Color"] = create_picker(scrollPanel, "Color", 200)
 		
