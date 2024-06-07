@@ -512,7 +512,7 @@ concommand.Add("gwater2_menu", function()
 		local labels = {}
 
 		create_label(scrollPanel, "Physics Parameters", "These parameters directly influence physics.", 5)
-		labels[1], sliders["Radius"] = create_slider(scrollPanel, "Radius", 0.1, 1, 1, 50)
+		labels[1], sliders["Radius"] = create_slider(scrollPanel, "Radius", 0.01, 1, 1, 50)
 		labels[2], sliders["Cohesion"] = create_slider(scrollPanel, "Cohesion", 0, 2, 3, 80)
 		labels[3], sliders["Adhesion"] = create_slider(scrollPanel, "Adhesion", 0, 0.2, 3, 110)
 		labels[4], sliders["Gravity"] = create_slider(scrollPanel, "Gravity", -30.48, 30.48, 2, 140)

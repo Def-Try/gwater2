@@ -74,20 +74,21 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 				Vector right = forward.Cross(Vector(0, 0, 1)).Normalized();
 				Vector up = right.Cross(forward);
 				Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };
-				
+
+				Vector4D aniscale = Vector4D(1, 1, 1, CM_2_INCH);
 				if (particle_ani) {
-					Vector4D ani1 = particle_ani1[particle_index];
-					Vector4D ani2 = particle_ani2[particle_index];
-					Vector4D ani3 = particle_ani3[particle_index];
+					Vector4D ani1 = particle_ani1[particle_index] * aniscale;
+					Vector4D ani2 = particle_ani2[particle_index] * aniscale;
+					Vector4D ani3 = particle_ani3[particle_index] * aniscale;
 
 					for (int i = 0; i < 3; i++) {
 						// Anisotropy warping (code provided by Spanky)
-						Vector pos_ani = local_pos[i] * radius;
+						Vector pos_ani = local_pos[i];
 						pos_ani = pos_ani + ani1.AsVector3D() * (local_pos[i].Dot(ani1.AsVector3D()) * ani1.w);
 						pos_ani = pos_ani + ani2.AsVector3D() * (local_pos[i].Dot(ani2.AsVector3D()) * ani2.w);
 						pos_ani = pos_ani + ani3.AsVector3D() * (local_pos[i].Dot(ani3.AsVector3D()) * ani3.w);
 
-						Vector world_pos = particle_pos + pos_ani;
+						Vector world_pos = particle_pos + pos_ani * radius;
 						mesh_builder.TexCoord2f(0, u[i], v[i]);
 						mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
 						mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);

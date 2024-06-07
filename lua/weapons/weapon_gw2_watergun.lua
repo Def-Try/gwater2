@@ -57,7 +57,7 @@ function SWEP:PrimaryAttack()
 	local owner = self:GetOwner()
 	local forward = owner:EyeAngles():Forward()
 	local sprite_size = (gwater2.solver:GetParameter("radius")*64) * math.Rand(1, 1.01)
-	gwater2.solver:AddCube(owner:EyePos() + forward * 20 * sprite_size, forward * 100, Vector(4, 4, 4), sprite_size)
+	gwater2.solver:AddCube(owner:EyePos() + forward * 20 * sprite_size, forward * 500, Vector(4, 4, 4), sprite_size)
 end
 
 function SWEP:SecondaryAttack()
@@ -66,7 +66,7 @@ function SWEP:SecondaryAttack()
 	local owner = self:GetOwner()
 	local forward = owner:EyeAngles():Forward()
 	local sprite_size = gwater2.solver:GetParameter("fluid_rest_distance")
-	gwater2.solver:AddCube(owner:EyePos() + forward * 40 * sprite_size, forward * 100, Vector(33, 33, 33), sprite_size)
+	gwater2.solver:AddCube(owner:EyePos() + forward * 40 * sprite_size, forward * 500, Vector(33, 33, 33), sprite_size)
 end
 
 function SWEP:Reload()

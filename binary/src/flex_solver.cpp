@@ -317,7 +317,7 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params->wind[1] = 0.0f;
 	params->wind[2] = 0.0f;
 
-	params->radius = 10.f;
+	params->radius = 0.1f;
 	params->viscosity = 0.0f;
 	params->dynamicFriction = 0.5f;
 	params->staticFriction = 0.5f;
@@ -350,7 +350,7 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params->solidPressure = 0.5f;
 	params->adhesion = 0.0f;
 	params->cohesion = 0.01f;
-	params->surfaceTension = 0.000001f;
+	params->surfaceTension = 0.1f;
 	params->vorticityConfinement = 0.0f;
 	params->buoyancy = 1.0f;
 
