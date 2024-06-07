@@ -180,7 +180,7 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 						pos_ani = pos_ani + ani2.AsVector3D() * (local_pos[i].Dot(ani2.AsVector3D()) * ani2.w);
 						pos_ani = pos_ani + ani3.AsVector3D() * (local_pos[i].Dot(ani3.AsVector3D()) * ani3.w);
 
-						Vector world_pos = particle_pos + pos_ani;
+						Vector world_pos = particle_pos + pos_ani * radius;
 						mesh_builder.TexCoord2f(0, u[i], v[i]);
 						mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
 						mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
