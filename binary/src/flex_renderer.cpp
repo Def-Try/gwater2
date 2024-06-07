@@ -4,6 +4,98 @@
 
 //extern IMaterialSystem* materials = NULL;	// stops main branch compile from bitching
 
+bool solveQuadratic(float a, float b, float c, float &minT, float &maxT)
+{
+	if (a == 0.0 && b == 0.0)
+	{
+		minT = 0.0;
+		maxT = 0.0;
+		return false;
+	}
+
+	float discriminant = b * b - 4.0 * a * c;
+
+	if (discriminant < 0.0)
+	{
+		return false;
+	}
+
+	float t = -0.5 * (b + Sign(b) * sqrt(discriminant));
+	minT = t / a;
+	maxT = c / t;
+
+	if (minT > maxT)
+	{
+		float tmp = minT;
+		minT = maxT;
+		maxT = tmp;
+	}
+
+	return true;
+}
+
+
+/// experimental port of anisotropy vertex shader to c++ dont use this yet
+void vertexshadermain(Vector4D q1, Vector4D q2, Vector4D q3, Vector4D worldPos)
+{
+	// construct quadric matrix
+	Vector4D q[4];
+	q[0] = Vector4D(q1.x * q1.w, q1.y * q1.w, q1.z * q1.w, 0.0);
+	q[1] = Vector4D(q2.x * q2.w, q2.y * q2.w, q2.z * q2.w, 0.0);
+	q[2] = Vector4D(q3.x * q3.w, q3.y * q3.w, q3.z * q3.w, 0.0);
+	q[3] = Vector4D(worldPos.x, worldPos.y, worldPos.z, 1.0);
+
+	// transforms a normal to parameter space (inverse transpose of (q*modelview)^-T)
+	Vector4D invClip[4];// = transpose(gl_ModelViewProjectionMatrix * q);
+
+	// solve for the right hand bounds in homogenous clip space
+	float a1 = DotInvW(invClip[3], invClip[3]);
+	float b1 = -2.0f * DotInvW(invClip[0], invClip[3]);
+	float c1 = DotInvW(invClip[0], invClip[0]);
+
+	float xmin;
+	float xmax;
+	solveQuadratic(a1, b1, c1, xmin, xmax);
+
+	// solve for the right hand bounds in homogenous clip space
+	float a2 = DotInvW(invClip[3], invClip[3]);
+	float b2 = -2.0f * DotInvW(invClip[1], invClip[3]);
+	float c2 = DotInvW(invClip[1], invClip[1]);
+
+	float ymin;
+	float ymax;
+	solveQuadratic(a2, b2, c2, ymin, ymax);
+
+	Vector4D gl_Position = Vector4D(worldPos.x, worldPos.y, worldPos.z, 1.0);
+	Vector4D gl_TexCoord[4];
+	gl_TexCoord[0] = Vector4D(xmin, xmax, ymin, ymax);
+
+	// construct inverse quadric matrix (used for ray-casting in parameter space)
+	Vector4D invq[4];
+	invq[0] = Vector4D(q1.x / q1.w, q1.y / q1.w, q1.z / q1.w, 0.0);
+	invq[1] = Vector4D(q2.x / q2.w, q2.y / q2.w, q2.z / q2.w, 0.0);
+	invq[2] = Vector4D(q3.x / q3.w, q3.y / q3.w, q3.z / q3.w, 0.0);
+	invq[3] = Vector4D(0.0, 0.0, 0.0, 1.0);
+
+	//invq = transpose(invq);
+	//invq[3] = -(invq * //gl_Position);
+
+	// transform a point from view space to parameter space
+	//invq = invq * gl_ModelViewMatrixInverse;
+
+	// pass down
+	gl_TexCoord[1] = invq[0];
+	gl_TexCoord[2] = invq[1];
+	gl_TexCoord[3] = invq[2];
+	gl_TexCoord[4] = invq[3];
+
+	// compute ndc pos for frustrum culling in GS
+	Vector4D ndcPos;// = gl_ModelViewProjectionMatrix * vec4(worldPos.xyz, 1.0);
+	gl_TexCoord[5] = ndcPos / ndcPos.w;
+}
+
+float DotInvW(Vector4D a, Vector4D b) { return a.x * b.x + a.y * b.y + a.z * b.z - a.w * b.w; }
+
 // lord have mercy brothers
 void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 
@@ -88,7 +180,7 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 						pos_ani = pos_ani + ani2.AsVector3D() * (local_pos[i].Dot(ani2.AsVector3D()) * ani2.w);
 						pos_ani = pos_ani + ani3.AsVector3D() * (local_pos[i].Dot(ani3.AsVector3D()) * ani3.w);
 
-						Vector world_pos = particle_pos + pos_ani * radius;
+						Vector world_pos = particle_pos + pos_ani;
 						mesh_builder.TexCoord2f(0, u[i], v[i]);
 						mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
 						mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
