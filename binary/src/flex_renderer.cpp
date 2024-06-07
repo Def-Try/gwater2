@@ -59,27 +59,26 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 		IMesh* imesh = render_context->CreateStaticMesh(VERTEX_POSITION | VERTEX_NORMAL | VERTEX_TEXCOORD0_2D, "");
 		mesh_builder.Begin(imesh, MATERIAL_TRIANGLES, MAX_PRIMATIVES);
 			for (int primative = 0; primative < MAX_PRIMATIVES && particle_index < max_particles; particle_index++) {
-				Vector particle_pos = particle_positions[particle_index].AsVector3D() * CM_2_INCH;
+				Vector particle_pos = particle_positions[particle_index].AsVector3D();
 
 				// Frustrum culling
 				Vector4D dst;
-				Vector4DMultiply(view_projection_matrix, Vector4D(particle_pos.x, particle_pos.y, particle_pos.z, 1), dst);
+				Vector4DMultiply(view_projection_matrix, Vector4D(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH, 1), dst);
 				if (dst.z < 0 || -dst.x - dst.w > 0 || dst.x - dst.w > 0 || -dst.y - dst.w > 0 || dst.y - dst.w > 0) {
 					continue;
 				}
 
 				// calculate triangle rotation
 				//Vector forward = (eye_pos - particle_pos).Normalized();
-				Vector forward = (particle_pos - eye_pos).Normalized();
+				Vector forward = ((particle_pos * CM_2_INCH) - eye_pos).Normalized();
 				Vector right = forward.Cross(Vector(0, 0, 1)).Normalized();
 				Vector up = right.Cross(forward);
 				Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };
-
-				Vector4D aniscale = Vector4D(CM_2_INCH, CM_2_INCH, CM_2_INCH, 1);
+				
 				if (particle_ani) {
-					Vector4D ani1 = particle_ani1[particle_index] * aniscale;
-					Vector4D ani2 = particle_ani2[particle_index] * aniscale;
-					Vector4D ani3 = particle_ani3[particle_index] * aniscale;
+					Vector4D ani1 = particle_ani1[particle_index];
+					Vector4D ani2 = particle_ani2[particle_index];
+					Vector4D ani3 = particle_ani3[particle_index];
 
 					for (int i = 0; i < 3; i++) {
 						// Anisotropy warping (code provided by Spanky)
@@ -90,15 +89,15 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 
 						Vector world_pos = particle_pos + pos_ani;
 						mesh_builder.TexCoord2f(0, u[i], v[i]);
-						mesh_builder.Position3f(world_pos.x, world_pos.y, world_pos.z);
+						mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
 						mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
 						mesh_builder.AdvanceVertex();
 					}
 				} else {
 					for (int i = 0; i < 3; i++) { // Same as above w/o anisotropy warping
-						Vector world_pos = particle_pos + local_pos[i] * (radius * CM_2_INCH);
+						Vector world_pos = particle_pos + local_pos[i] * radius;
 						mesh_builder.TexCoord2f(0, u[i], v[i]);
-						mesh_builder.Position3f(world_pos.x, world_pos.y, world_pos.z);
+						mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
 						mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
 						mesh_builder.AdvanceVertex();
 					}
@@ -156,7 +155,7 @@ void FlexRenderer::build_diffuse(FlexSolver* solver, float radius) {
 
 			// Frustrum culling
 			Vector4D dst;
-			Vector4DMultiply(view_projection_matrix, Vector4D(particle_pos.x, particle_pos.y, particle_pos.z, 1), dst);
+			Vector4DMultiply(view_projection_matrix, Vector4D(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH, 1), dst);
 			if (dst.z < 0 || -dst.x - dst.w > 0 || dst.x - dst.w > 0 || -dst.y - dst.w > 0 || dst.y - dst.w > 0) {
 				continue;
 			}
@@ -172,7 +171,7 @@ void FlexRenderer::build_diffuse(FlexSolver* solver, float radius) {
 				//float u1 = ((u[i] - 0.5) * cos(lifetime * 8) + (v[i] - 0.5) * sin(lifetime * 8)) + 0.5;
 				//float v1 = ((u[i] - 0.5) * sin(lifetime * 8) - (v[i] - 0.5) * cos(lifetime * 8)) + 0.5;
 				mesh_builder.TexCoord2f(0, u[i], v[i]);
-				mesh_builder.Position3f(world_pos.x, world_pos.y, world_pos.z);
+				mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
 				mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
 				mesh_builder.AdvanceVertex();
 			}
