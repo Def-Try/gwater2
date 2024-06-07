@@ -1,9 +1,12 @@
 #include "flex_renderer.h"
 
+#define CM_2_INCH 39.3701f
+
 //extern IMaterialSystem* materials = NULL;	// stops main branch compile from bitching
 
 // lord have mercy brothers
 void FlexRenderer::build_water(FlexSolver* solver, float radius) {
+
 	if (solver == nullptr) return;
 
 	// Clear previous imeshes since they are being rebuilt
@@ -56,7 +59,7 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 		IMesh* imesh = render_context->CreateStaticMesh(VERTEX_POSITION | VERTEX_NORMAL | VERTEX_TEXCOORD0_2D, "");
 		mesh_builder.Begin(imesh, MATERIAL_TRIANGLES, MAX_PRIMATIVES);
 			for (int primative = 0; primative < MAX_PRIMATIVES && particle_index < max_particles; particle_index++) {
-				Vector particle_pos = particle_positions[particle_index].AsVector3D();
+				Vector particle_pos = particle_positions[particle_index].AsVector3D() * CM_2_INCH;
 
 				// Frustrum culling
 				Vector4D dst;
@@ -72,10 +75,11 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 				Vector up = right.Cross(forward);
 				Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };
 
+				Vector4D aniscale = Vector4D(CM_2_INCH, CM_2_INCH, CM_2_INCH, 1);
 				if (particle_ani) {
-					Vector4D ani1 = particle_ani1[particle_index];
-					Vector4D ani2 = particle_ani2[particle_index];
-					Vector4D ani3 = particle_ani3[particle_index];
+					Vector4D ani1 = particle_ani1[particle_index] * aniscale;
+					Vector4D ani2 = particle_ani2[particle_index] * aniscale;
+					Vector4D ani3 = particle_ani3[particle_index] * aniscale;
 
 					for (int i = 0; i < 3; i++) {
 						// Anisotropy warping (code provided by Spanky)
@@ -92,7 +96,7 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 					}
 				} else {
 					for (int i = 0; i < 3; i++) { // Same as above w/o anisotropy warping
-						Vector world_pos = particle_pos + local_pos[i] * radius;
+						Vector world_pos = particle_pos + local_pos[i] * (radius * CM_2_INCH);
 						mesh_builder.TexCoord2f(0, u[i], v[i]);
 						mesh_builder.Position3f(world_pos.x, world_pos.y, world_pos.z);
 						mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
@@ -148,7 +152,7 @@ void FlexRenderer::build_diffuse(FlexSolver* solver, float radius) {
 		IMesh* imesh = render_context->CreateStaticMesh(VERTEX_POSITION | VERTEX_NORMAL | VERTEX_TEXCOORD0_2D, "");
 		mesh_builder.Begin(imesh, MATERIAL_TRIANGLES, MAX_PRIMATIVES);
 		for (int primative = 0; primative < MAX_PRIMATIVES && particle_index < max_particles; particle_index++) {
-			Vector particle_pos = particle_positions[particle_index].AsVector3D();
+			Vector particle_pos = particle_positions[particle_index].AsVector3D() * CM_2_INCH;
 
 			// Frustrum culling
 			Vector4D dst;

@@ -3,6 +3,7 @@
 
 #define MAX_COLLIDERS 8192	// source can't go over this number of props so.. might as well just have it as the limit
 
+#define CM_2_INCH 39.3701f
 // todo: add smartcomments
 
 // Struct that holds FleX solver data
@@ -65,8 +66,8 @@ void FlexSolver::add_particle(Vector4D pos, Vector vel) {
 	if (get_active_particles() + particles.size() >= get_max_particles()) return;
 
 	Particle p;
-	p.pos = pos;
-	p.vel = vel;
+	p.pos = pos / CM_2_INCH;
+	p.vel = vel / CM_2_INCH;
 	particles.push_back(p);
 }
 

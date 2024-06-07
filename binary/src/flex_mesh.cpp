@@ -1,5 +1,7 @@
 #include "flex_mesh.h"
 
+#define CM_2_INCH 39.3701f
+
 float rad(float degree) {
 	return (degree * (M_PI / 180));
 }
@@ -104,8 +106,10 @@ bool FlexMesh::init_concave(NvFlexLibrary* lib, std::vector<Vector> verts, bool 
 	Vector min = verts[0];
 	Vector max = verts[0];
 	for (int i = 0; i < verts.size(); i++) {
+		verts[i].x /= CM_2_INCH;
+		verts[i].y /= CM_2_INCH;
+		verts[i].z /= CM_2_INCH;
 		host_verts[i] = Vector4D(verts[i].x, verts[i].y, verts[i].z, 0);
-
 		// Flip triangle winding (xyz -> yxz)
 		switch (i % 3) {
 			case 0:
@@ -154,6 +158,10 @@ bool FlexMesh::init_concave(NvFlexLibrary* lib, Vector* verts, int num_verts, bo
 	Vector min = verts[0];
 	Vector max = verts[0];
 	for (int i = 0; i < num_verts; i++) {
+
+		verts[i].x /= CM_2_INCH;
+		verts[i].y /= CM_2_INCH;
+		verts[i].z /= CM_2_INCH;
 		host_verts[i] = Vector4D(verts[i].x, verts[i].y, verts[i].z, 0);
 		host_indices[i] = i;
 

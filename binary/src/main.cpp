@@ -21,7 +21,7 @@ int FLEXRENDERER_METATABLE = 0;
 typedef void* (__cdecl* UTIL_EntityByIndexFN)(int);
 UTIL_EntityByIndexFN UTIL_EntityByIndex = nullptr;
 
-float CM_2_INCH = 2.54 * 2.54;	// FleX is in centimeters, source is in inches. We need to convert units
+float CM_2_INCH = 39.3701;	// FleX is in centimeters, source is in inches. We need to convert units 
 
 //#define GET_FLEX(type, stack_pos) LUA->GetUserType<type>(stack_pos, type == FlexSolver ? FLEXSOLVER_METATABLE : FLEXRENDERER_METATABLE)
 
@@ -66,7 +66,7 @@ LUA_FUNCTION(FLEXSOLVER_Tick) {
 	FlexSolver* flex = GET_FLEXSOLVER(1);
 	
 	// Avoid ticking if the deltatime ends up being zero, as it invalidates the simulation
-	float dt = (float)LUA->GetNumber(2) * 10;
+	float dt = (float)LUA->GetNumber(2);
 	if (flex->get_parameter("timescale") == 0 || dt == 0 || flex->get_active_particles() == 0) {
 		LUA->PushBool(true);
 		return 1;
@@ -87,7 +87,7 @@ LUA_FUNCTION(FLEXSOLVER_AddConcaveMesh) {
 	LUA->CheckType(4, Type::Vector);	// Initial Pos
 	LUA->CheckType(5, Type::Angle);		// Initial Angle
 
-	Vector pos = LUA->GetVector(4);
+	Vector pos = LUA->GetVector(4) / CM_2_INCH;
 	QAngle ang = LUA->GetAngle(5);
 
 	FlexSolver* flex = GET_FLEXSOLVER(1);
