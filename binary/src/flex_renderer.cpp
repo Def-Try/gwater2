@@ -82,7 +82,7 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 
 					for (int i = 0; i < 3; i++) {
 						// Anisotropy warping (code provided by Spanky)
-						Vector pos_ani = local_pos[i];
+						Vector pos_ani = local_pos[i] * radius;
 						pos_ani = pos_ani + ani1.AsVector3D() * (local_pos[i].Dot(ani1.AsVector3D()) * ani1.w);
 						pos_ani = pos_ani + ani2.AsVector3D() * (local_pos[i].Dot(ani2.AsVector3D()) * ani2.w);
 						pos_ani = pos_ani + ani3.AsVector3D() * (local_pos[i].Dot(ani3.AsVector3D()) * ani3.w);
