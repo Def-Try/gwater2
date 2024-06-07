@@ -326,8 +326,8 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params->drag = 0.0f;
 	params->lift = 1.0f;
 	params->numIterations = 3;
-	params->fluidRestDistance = 0.065f;
-	params->solidRestDistance = 0.065f;
+	params->fluidRestDistance = 0.0975;
+	params->solidRestDistance = 0.0975;
 
 	params->anisotropyScale = 1.f;
 	params->anisotropyMin = 0.1f;
@@ -338,7 +338,7 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params->damping = 0.0f;
 	params->particleCollisionMargin = 0.f;
 	params->shapeCollisionMargin = 0.f;	// Increase if lots of water pressure is expected. Higher values cause more collision clipping
-	params->collisionDistance = 0.05f; // Needed for tri-particle intersection
+	params->collisionDistance = 0.075; // Needed for tri-particle intersection
 	params->sleepThreshold = 0.1f;
 	params->shockPropagation = 0.0f;
 	params->restitution = 0.0f;
@@ -350,7 +350,7 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params->solidPressure = 0.5f;
 	params->adhesion = 0.0f;
 	params->cohesion = 0.01f;
-	params->surfaceTension = 100;
+	params->surfaceTension = 19.8;
 	params->vorticityConfinement = 0.0f;
 	params->buoyancy = 1.0f;
 
