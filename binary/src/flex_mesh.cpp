@@ -60,15 +60,9 @@ bool FlexMesh::init_convex(NvFlexLibrary* lib, std::vector<Vector> verts, bool d
 	Vector min = verts[0];
 	Vector max = verts[0];
 	for (int i = 0; i < verts.size(); i += 3) {
-		verts[i].x /= CM_2_INCH;
-		verts[i].y /= CM_2_INCH;
-		verts[i].z /= CM_2_INCH;
-		verts[i + 1].x /= CM_2_INCH;
-		verts[i + 1].y /= CM_2_INCH;
-		verts[i + 1].z /= CM_2_INCH;
-		verts[i + 2].x /= CM_2_INCH;
-		verts[i + 2].y /= CM_2_INCH;
-		verts[i + 2].z /= CM_2_INCH;
+		verts[i] /= CM_2_INCH;
+		verts[i + 1] /= CM_2_INCH;
+		verts[i + 2] /= CM_2_INCH;
 
 		Vector tri[3] = { verts[i], verts[i + 1], verts[i + 2] };
 
