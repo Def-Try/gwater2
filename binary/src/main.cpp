@@ -430,7 +430,7 @@ LUA_FUNCTION(FLEXSOLVER_AddCube) {
 	FlexSolver* flex = GET_FLEXSOLVER(1);
 	Vector gmodPos = LUA->GetVector(2);		//pos
 	Vector gmodVel = LUA->GetVector(3);		//vel
-	Vector gmodSize = LUA->GetVector(4);	//size
+	Vector gmodSize = LUA->GetVector(4) / 2;	//size
 	float size = LUA->GetNumber(5) * CM_2_INCH;			//size apart
 
 	for (float z = -gmodSize.z; z < gmodSize.z; z++) {
