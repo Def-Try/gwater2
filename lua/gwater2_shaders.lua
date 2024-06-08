@@ -101,7 +101,7 @@ hook.Add("PreDrawViewModels", "gwater2_render", function(depth, sky, sky3d)	--Pr
 	render.DrawTextureToScreen(cache_screen1)
 
 	-- grab normals
-	water_normals:SetFloat("$radius", radius * (39.3701 / 2))
+	water_normals:SetFloat("$radius", radius * (39.3701 / 1))
 	render.SetMaterial(water_normals)
 	render.PushRenderTarget(cache_normals)
 	render.SetRenderTargetEx(1, cache_depth)
