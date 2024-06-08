@@ -181,7 +181,7 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 						//pos_ani = pos_ani + ani2.AsVector3D() * (local_pos[i].Dot(ani2.AsVector3D()) * ani2.w);
 						//pos_ani = pos_ani + ani3.AsVector3D() * (local_pos[i].Dot(ani3.AsVector3D()) * ani3.w);
 
-						// New anisotropy warping (code provided by Xenthio) 
+						// New anisotropy warping
 						local_pos[i] *= radius/2.4;
 						float dot1 = local_pos[i].Dot(ani1.AsVector3D());
 						float dot2 = local_pos[i].Dot(ani2.AsVector3D());
@@ -237,7 +237,7 @@ void FlexRenderer::build_diffuse(FlexSolver* solver, float radius) {
 	float u[3] = { 0.5 - SQRT3 / 2, 0.5, 0.5 + SQRT3 / 2 };
 	float v[3] = { 1, -0.5, 1 };
 	float inv_max_lifetime = 1.f / solver->get_parameter("diffuse_lifetime");
-	float particle_scale = solver->get_parameter("timescale") * 0.0016;
+	float particle_scale = solver->get_parameter("timescale") * (0.0016 * CM_2_INCH);
 
 	Vector4D* particle_positions = (Vector4D*)solver->get_host("diffuse_pos");
 	Vector4D* particle_velocities = (Vector4D*)solver->get_host("diffuse_vel");
@@ -263,7 +263,7 @@ void FlexRenderer::build_diffuse(FlexSolver* solver, float radius) {
 
 			for (int i = 0; i < 3; i++) {
 				Vector pos_ani = local_pos[i];	// Warp based on velocity
-				Vector vel = particle_velocities[particle_index].AsVector3D() * CM_2_INCH;
+				Vector vel = particle_velocities[particle_index].AsVector3D();
 				pos_ani = pos_ani + (vel * pos_ani.Dot(vel) * particle_scale).Min(Vector(3, 3, 3)).Max(Vector(-3, -3, -3));
 
 				float lifetime = particle_positions[particle_index].w * inv_max_lifetime;	// scale bubble size by life left
