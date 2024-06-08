@@ -35,6 +35,9 @@ end
 local function add_prop(ent)
 	if !IsValid(ent) or !ent:IsSolid() or ent:IsWeapon() or !ent:GetModel() then return end
 
+	-- Note: if we want to respect no collide from the tool or context menu, check for COLLISION_GROUP_WORLD
+	-- if ent:GetCollisionGroup() == COLLISION_GROUP_WORLD or (IsValid(ent:GetPhysicsObject()) and (!ent:GetPhysicsObject():IsCollisionEnabled())) then return end
+
 	local convexes = unfucked_get_mesh(ent)
 	if !convexes then return end
 

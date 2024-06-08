@@ -76,7 +76,6 @@ hook.Add("PreDrawViewModels", "gwater2_render", function(depth, sky, sky3d)	--Pr
 	--render.SetMaterial(Material("models/props_combine/combine_interface_disp"))
 
 	render.UpdateScreenEffectTexture()	-- _rt_framebuffer is used in refraction shader
-	render.DrawTextureToScreenRect(cache_screen0, ScrW() * 0.75, 0, ScrW() / 4, ScrH() / 4)
 	
 	-- Depth absorption (disabled when opaque liquids are enabled)
 	local _, _, _, a = water:GetVector4D("$color2")
