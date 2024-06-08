@@ -168,7 +168,7 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 				Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };
 
 
-				Vector4D aniscale = Vector4D(1, 1, 1, 1 / radius);
+				Vector4D aniscale = Vector4D(1, 1, 1, 1/(radius* 2.4));
 				if (particle_ani) {
 					Vector4D ani1 = particle_ani1[particle_index] * aniscale;
 					Vector4D ani2 = particle_ani2[particle_index] * aniscale;
@@ -181,8 +181,8 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 						//pos_ani = pos_ani + ani2.AsVector3D() * (local_pos[i].Dot(ani2.AsVector3D()) * ani2.w);
 						//pos_ani = pos_ani + ani3.AsVector3D() * (local_pos[i].Dot(ani3.AsVector3D()) * ani3.w);
 
-						// New anisotropy warping (code provided by Xenthio)
-						local_pos[i] *= radius;
+						// New anisotropy warping (code provided by Xenthio) 
+						local_pos[i] *= radius/2.4;
 						float dot1 = local_pos[i].Dot(ani1.AsVector3D());
 						float dot2 = local_pos[i].Dot(ani2.AsVector3D());
 						float dot3 = local_pos[i].Dot(ani3.AsVector3D());

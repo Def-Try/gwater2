@@ -317,9 +317,9 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params->wind[1] = 0.0f;
 	params->wind[2] = 0.0f;
 
-	params->radius = 0.15f;
+	params->radius = 0.20f;
 	params->viscosity = 0.0f;
-	params->dynamicFriction = 0.2f;
+	params->dynamicFriction = 0.5f;
 	params->staticFriction = 0.0f;
 	params->particleFriction = 0.0f;
 	params->freeSurfaceDrag = 0.0f;
@@ -329,9 +329,9 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params->fluidRestDistance = params->radius * 0.65f;
 	params->solidRestDistance = params->radius * 0.65f;
 
-	params->anisotropyScale = 1.f;
+	params->anisotropyScale = 4.f;
 	params->anisotropyMin = 0.0f;
-	params->anisotropyMax = 2.f;
+	params->anisotropyMax = 4.f;
 	params->smoothing = 1.0f;
 
 	params->dissipation = 0.f;
