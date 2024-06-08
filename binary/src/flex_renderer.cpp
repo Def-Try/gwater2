@@ -167,7 +167,8 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 				Vector up = right.Cross(forward);
 				Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };
 
-				Vector4D aniscale = Vector4D(1, 1, 1, CM_2_INCH);
+
+				Vector4D aniscale = Vector4D(1, 1, 1, 1 / radius);
 				if (particle_ani) {
 					Vector4D ani1 = particle_ani1[particle_index] * aniscale;
 					Vector4D ani2 = particle_ani2[particle_index] * aniscale;
