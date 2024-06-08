@@ -181,13 +181,13 @@ void FlexRenderer::build_water(FlexSolver* solver, float radius) {
 						//pos_ani = pos_ani + ani3.AsVector3D() * (local_pos[i].Dot(ani3.AsVector3D()) * ani3.w);
 
 						// New anisotropy warping (code provided by Xenthio)
-						//local_pos[i] *= radius;
+						local_pos[i] *= radius;
 						float dot1 = local_pos[i].Dot(ani1.AsVector3D());
 						float dot2 = local_pos[i].Dot(ani2.AsVector3D());
 						float dot3 = local_pos[i].Dot(ani3.AsVector3D());
 						Vector pos_ani = local_pos[i] + ani1.AsVector3D() * ani1.w * dot1 + ani2.AsVector3D() * ani2.w * dot2 + ani3.AsVector3D() * ani3.w * dot3;
 
-						Vector world_pos = particle_pos + pos_ani * radius;
+						Vector world_pos = particle_pos + pos_ani;// *radius;
 						mesh_builder.TexCoord2f(0, u[i], v[i]);
 						mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
 						mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
