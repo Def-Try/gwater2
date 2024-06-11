@@ -144,9 +144,9 @@ void FlexSolver::map_particles() {
 
 		// fixes visual flashing
 		((Vector4D*)hosts["particle_smooth"])[n] = particle.pos;
+		((Vector4D*)hosts["particle_ani0"])[n] = Vector4D(0, 0, 0, 0);
 		((Vector4D*)hosts["particle_ani1"])[n] = Vector4D(0, 0, 0, 0);
 		((Vector4D*)hosts["particle_ani2"])[n] = Vector4D(0, 0, 0, 0);
-		((Vector4D*)hosts["particle_ani3"])[n] = Vector4D(0, 0, 0, 0);
 	}
 
 	// unmap buffers
@@ -191,7 +191,7 @@ void FlexSolver::tick(float dt) {
 	NvFlexGetActive(solver, get_buffer("particle_active"), copy_description);
 	NvFlexGetDiffuseParticles(solver, get_buffer("diffuse_pos"), get_buffer("diffuse_vel"), get_buffer("diffuse_count"));
 	if (get_parameter("coupling") != 0) NvFlexGetContacts(solver, get_buffer("contact_planes"), get_buffer("contact_vel"), get_buffer("contact_indices"), get_buffer("contact_count"));
-	if (get_parameter("anisotropy_scale") != 0) NvFlexGetAnisotropy(solver, get_buffer("particle_ani1"), get_buffer("particle_ani2"), get_buffer("particle_ani3"), copy_description);
+	if (get_parameter("anisotropy_scale") != 0) NvFlexGetAnisotropy(solver, get_buffer("particle_ani0"), get_buffer("particle_ani1"), get_buffer("particle_ani2"), copy_description);
 	if (get_parameter("smoothing") != 0) NvFlexGetSmoothParticles(solver, get_buffer("particle_smooth"), copy_description);
 }
 
@@ -425,9 +425,9 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	add_buffer("contact_count", sizeof(int), particles);
 	add_buffer("contact_indices", sizeof(int), particles);
 
+	add_buffer("particle_ani0", sizeof(Vector4D), particles);
 	add_buffer("particle_ani1", sizeof(Vector4D), particles);
 	add_buffer("particle_ani2", sizeof(Vector4D), particles);
-	add_buffer("particle_ani3", sizeof(Vector4D), particles);
 
 	add_buffer("diffuse_pos", sizeof(Vector4D), solver_description.maxDiffuseParticles);
 	add_buffer("diffuse_vel", sizeof(Vector4D), solver_description.maxDiffuseParticles);

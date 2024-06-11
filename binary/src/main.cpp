@@ -8,6 +8,7 @@
 #include "flex_solver.h"
 #include "flex_renderer.h"
 #include "shader_inject.h"
+#include "cdll_client_int.h"
 
 #include "sighack.h"	// for reaction forces
 
@@ -530,12 +531,13 @@ LUA_FUNCTION(FLEXRENDERER_GarbageCollect) {
 }
 
 // FlexRenderer imesh related functions
-// Builds water particles to IMesh* structs
-LUA_FUNCTION(FLEXRENDERER_BuildWater) {
+// Builds all meshes related to FlexSolver
+LUA_FUNCTION(FLEXRENDERER_BuildMeshes) {
 	LUA->CheckType(1, FLEXRENDERER_METATABLE);
 	LUA->CheckType(2, FLEXSOLVER_METATABLE);
 	LUA->CheckNumber(3);
-	GET_FLEXRENDERER(1)->build_water(GET_FLEXSOLVER(2), LUA->GetNumber(3));
+	LUA->CheckNumber(4);
+	GET_FLEXRENDERER(1)->build_meshes(GET_FLEXSOLVER(2), LUA->GetNumber(3), LUA->GetNumber(4));
 
 	return 0;
 }
@@ -544,16 +546,6 @@ LUA_FUNCTION(FLEXRENDERER_BuildWater) {
 LUA_FUNCTION(FLEXRENDERER_DrawWater) {
 	LUA->CheckType(1, FLEXRENDERER_METATABLE);
 	GET_FLEXRENDERER(1)->draw_water();
-
-	return 0;
-}
-
-// Builds diffuse particles to IMesh* structs
-LUA_FUNCTION(FLEXRENDERER_BuildDiffuse) {
-	LUA->CheckType(1, FLEXRENDERER_METATABLE);
-	LUA->CheckType(2, FLEXSOLVER_METATABLE);
-	LUA->CheckNumber(3);
-	GET_FLEXRENDERER(1)->build_diffuse(GET_FLEXSOLVER(2), LUA->GetNumber(3));
 
 	return 0;
 }
@@ -601,7 +593,8 @@ LUA_FUNCTION(NewFlexSolver) {
 }
 
 LUA_FUNCTION(NewFlexRenderer) {
-	FlexRenderer* flex_renderer = new FlexRenderer();
+	LUA->CheckNumber(1);
+	FlexRenderer* flex_renderer = new FlexRenderer(LUA->GetNumber(1));
 	LUA->PushUserType(flex_renderer, FLEXRENDERER_METATABLE);
 	LUA->PushMetaTable(FLEXRENDERER_METATABLE);
 	LUA->SetMetaTable(-2);
@@ -644,6 +637,11 @@ LUA_FUNCTION(NewRenderer) {
 	return 0;
 }
 
+LUA_FUNCTION(EjectShaders) {
+	LUA->PushBool(eject_shaders());
+	return 1;
+}
+
 // `mat_antialias 0` but shit
 /*LUA_FUNCTION(SetMSAAEnabled) {
 	MaterialSystem_Config_t config = materials->GetCurrentConfigForVideoCard();
@@ -673,7 +671,10 @@ GMOD_MODULE_OPEN() {
 
 	if (FLEX_LIBRARY == nullptr) 
 		LUA->ThrowError("[GWater2 Internal Error]: Nvidia FleX Failed to load! (Does your GPU meet the minimum requirements to run FleX?)");
-	
+
+	if (!Sys_LoadInterface("engine", VENGINE_CLIENT_INTERFACE_VERSION, NULL, (void**)&engine))
+		LUA->ThrowError("[GWater2 Internal Error]: C++ EngineClient failed to load!");
+
 	if (!Sys_LoadInterface("materialsystem", MATERIAL_SYSTEM_INTERFACE_VERSION, NULL, (void**)&materials))
 		LUA->ThrowError("[GWater2 Internal Error]: C++ Materialsystem failed to load!");
 
@@ -727,9 +728,8 @@ GMOD_MODULE_OPEN() {
 	// FlexMetaTable.__index = {func1, func2, ...}
 	LUA->CreateTable();
 	ADD_FUNCTION(LUA, FLEXRENDERER_GarbageCollect, "Destroy");
-	ADD_FUNCTION(LUA, FLEXRENDERER_BuildWater, "BuildWater");
+	ADD_FUNCTION(LUA, FLEXRENDERER_BuildMeshes, "BuildMeshes");
 	ADD_FUNCTION(LUA, FLEXRENDERER_DrawWater, "DrawWater");
-	ADD_FUNCTION(LUA, FLEXRENDERER_BuildDiffuse, "BuildDiffuse");
 	ADD_FUNCTION(LUA, FLEXRENDERER_DrawDiffuse, "DrawDiffuse");
 	LUA->SetField(-2, "__index");
 
@@ -738,6 +738,7 @@ GMOD_MODULE_OPEN() {
 	ADD_FUNCTION(LUA, NewFlexSolver, "FlexSolver");
 	ADD_FUNCTION(LUA, NewFlexRenderer, "FlexRenderer");
 	ADD_FUNCTION(LUA, NewRenderer, "NewRenderer");
+	ADD_FUNCTION(LUA, EjectShaders, "EjectShaders");
 	LUA->Pop();
 
 	// Get serverside physics objects from client DLL. Since server.dll exists in memory, we can find it and avoid networking.

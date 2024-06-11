@@ -747,14 +747,16 @@ concommand.Add("gwater2_menu", function()
 			Color(255, 0, 0),
 		}
 
+		local slider
 		local labels = {}
 		create_label(scrollPanel, "Performance Settings", "These settings directly influence performance", 5)
 		-- create_slider(self, text, min, max, decimals, dock, x_offset, length, label_offset_x, reset_offset_x)
 		labels[1] = create_slider(scrollPanel, "Iterations", 1, 10, 0, 50, 410, -50)
 		labels[2] = create_slider(scrollPanel, "Substeps", 1, 10, 0, 80, 410, -50)
-		labels[3] = create_slider(scrollPanel, "Blur Passes", 0, 4, 0, 110, 410, -50, function(val) 
+		labels[3], slider = create_slider(scrollPanel, "Blur Passes", 0, 4, 0, 110, 410, -50, function(val) 
 			options.blur_passes:SetInt(val) 
 		end) 
+		slider:SetValue(options.blur_passes:GetInt())
 
 		-- particle limit box
 		local label = vgui.Create("DLabel", scrollPanel)
@@ -830,8 +832,8 @@ I DO NOT take responsiblity for any hardware damage this may cause]], "DermaDefa
 			confirm.Paint = nil
 			function confirm:DoClick() 
 				gwater2.solver:Destroy()
-				gwater2.solver = FlexSolver(slider:GetValue(), slider:GetValue())
-				gwater2.meshes = {}
+				gwater2.solver = FlexSolver(slider:GetValue())
+				gwater2.renderer = FlexRenderer(46)
 				gwater2.reset_solver(true)
 				frame:Close()
 				surface.PlaySound("buttons/button15.wav")

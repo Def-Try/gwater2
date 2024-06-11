@@ -3,8 +3,6 @@
 #include "shaders/inc/GWaterNormals_vs30.inc"
 #include "shaders/inc/GWaterNormals_ps30.inc"
 
-bool g_shaderConfigDumpEnable = false;
-
 BEGIN_VS_SHADER(GWaterNormals, "gwater2 helper")
 
 // Shader parameters

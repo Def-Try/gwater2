@@ -1,313 +1,346 @@
 #include "flex_renderer.h"
+#include "cdll_client_int.h"
+
+extern IVEngineClient* engine = NULL;
 
 #define CM_2_INCH 39.3701f
 
 //extern IMaterialSystem* materials = NULL;	// stops main branch compile from bitching
 
-bool solveQuadratic(float a, float b, float c, float &minT, float &maxT)
-{
-	if (a == 0.0 && b == 0.0)
-	{
-		minT = 0.0;
-		maxT = 0.0;
-		return false;
+// Not sure why this isn't defined in the standard math library
+#define min(a, b) a < b ? a : b
+
+float u[3] = { 0.5 - SQRT3 / 2, 0.5, 0.5 + SQRT3 / 2 };
+float v[3] = { 1, -0.5, 1 };
+
+// Builds meshes of water particles with anisotropy
+IMesh* _build_water_anisotropy(int id, FlexRendererThreadData data) {
+	int start = id * MAX_PRIMATIVES;
+	int end = min((id + 1) * MAX_PRIMATIVES, data.max_particles);
+
+	// We need to figure out how many and which particles are going to be rendered
+	int particles_to_render = 0;
+	for (int particle_index = start; particle_index < end; ++particle_index) {
+		Vector particle_pos = data.particle_positions[particle_index].AsVector3D();
+
+		// Frustrum culling
+		Vector4D dst;
+		Vector4DMultiply(data.view_projection_matrix, Vector4D(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH, 1), dst);
+		if (dst.z < 0 || -dst.x - dst.w > 0 || dst.x - dst.w > 0 || -dst.y - dst.w > 0 || dst.y - dst.w > 0) continue;
+
+		// PVS Culling
+		if (!engine->IsBoxVisible(Vector(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH), Vector(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH))) continue;
+		
+		// Add to our buffer
+		data.render_buffer[start + particles_to_render] = particle_index;
+		particles_to_render++;
 	}
 
-	float discriminant = b * b - 4.0 * a * c;
+	Vector4D aniscale = Vector4D(1, 1, 1, 1/(radius* 2.4));
+	// Don't even bother
+	if (particles_to_render == 0) return nullptr;
 
-	if (discriminant < 0.0)
-	{
-		return false;
+	IMesh* mesh = materials->GetRenderContext()->CreateStaticMesh(VERTEX_POSITION | VERTEX_NORMAL | VERTEX_TEXCOORD0_2D, "");
+	CMeshBuilder mesh_builder;
+	mesh_builder.Begin(mesh, MATERIAL_TRIANGLES, particles_to_render);
+	for (int i = start; i < start + particles_to_render; ++i) {
+		int particle_index = data.render_buffer[i];
+		Vector particle_pos = data.particle_positions[particle_index].AsVector3D();
+
+		// calculate triangle rotation
+		//Vector forward = (eye_pos - particle_pos).Normalized();
+		Vector forward = ((particle_pos * CM_2_INCH) - eye_pos).Normalized();
+		Vector right = forward.Cross(Vector(0, 0, 1)).Normalized();
+		Vector up = right.Cross(forward);
+		Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };
+
+		Vector4D ani0 = data.particle_ani0[particle_index] * aniscale;
+		Vector4D ani1 = data.particle_ani1[particle_index] * aniscale;
+		Vector4D ani2 = data.particle_ani2[particle_index] * aniscale;
+
+		for (int i = 0; i < 3; i++) {
+			// Anisotropy warping (code provided by Spanky) 
+			local_pos[i] *= radius/2.4;
+			float dot1 = local_pos[i].Dot(ani1.AsVector3D());
+			float dot2 = local_pos[i].Dot(ani2.AsVector3D());
+			float dot3 = local_pos[i].Dot(ani3.AsVector3D());
+			Vector pos_ani = local_pos[i] + ani1.AsVector3D() * ani1.w * dot1 + ani2.AsVector3D() * ani2.w * dot2 + ani3.AsVector3D() * ani3.w * dot3;
+
+			Vector world_pos = particle_pos + pos_ani;
+			mesh_builder.TexCoord2f(0, u[i], v[i]);
+			mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
+			mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
+			mesh_builder.AdvanceVertex();
+		}
 	}
+	mesh_builder.End();
 
-	float t = -0.5 * (b + Sign(b) * sqrt(discriminant));
-	minT = t / a;
-	maxT = c / t;
-
-	if (minT > maxT)
-	{
-		float tmp = minT;
-		minT = maxT;
-		maxT = tmp;
-	}
-
-	return true;
+	return mesh;
 }
 
+// Builds meshes of water particles without anisotropy
+IMesh* _build_water(int id, FlexRendererThreadData data) {
+	int start = id * MAX_PRIMATIVES;
+	int end = min((id + 1) * MAX_PRIMATIVES, data.max_particles);
 
-float DotInvW(Vector4D a, Vector4D b) { return a.x * b.x + a.y * b.y + a.z * b.z - a.w * b.w; }
+	// We need to figure out how many and which particles are going to be rendered
+	int particles_to_render = 0;
+	for (int particle_index = start; particle_index < end; ++particle_index) {
+		Vector particle_pos = data.particle_positions[particle_index].AsVector3D();
 
-/// experimental port of anisotropy vertex shader to c++ dont use this yet
-void vertexshadermain(Vector4D q1, Vector4D q2, Vector4D q3, Vector4D worldPos)
-{
-	// construct quadric matrix
-	Vector4D q[4];
-	q[0] = Vector4D(q1.x * q1.w, q1.y * q1.w, q1.z * q1.w, 0.0);
-	q[1] = Vector4D(q2.x * q2.w, q2.y * q2.w, q2.z * q2.w, 0.0);
-	q[2] = Vector4D(q3.x * q3.w, q3.y * q3.w, q3.z * q3.w, 0.0);
-	q[3] = Vector4D(worldPos.x, worldPos.y, worldPos.z, 1.0);
+		// Frustrum culling
+		Vector4D dst;
+		Vector4DMultiply(data.view_projection_matrix, Vector4D(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH, 1), dst);
+		if (dst.z < 0 || -dst.x - dst.w > 0 || dst.x - dst.w > 0 || -dst.y - dst.w > 0 || dst.y - dst.w > 0) continue;
 
-	// transforms a normal to parameter space (inverse transpose of (q*modelview)^-T)
-	Vector4D invClip[4];// = transpose(gl_ModelViewProjectionMatrix * q);
+		// PVS Culling
+		if (!engine->IsBoxVisible(Vector(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH), Vector(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH))) continue;
 
-	// solve for the right hand bounds in homogenous clip space
-	float a1 = DotInvW(invClip[3], invClip[3]);
-	float b1 = -2.0f * DotInvW(invClip[0], invClip[3]);
-	float c1 = DotInvW(invClip[0], invClip[0]);
+		// Add to our buffer
+		data.render_buffer[start + particles_to_render] = particle_index;
+		particles_to_render++;
+	}
 
-	float xmin;
-	float xmax;
-	solveQuadratic(a1, b1, c1, xmin, xmax);
+	// Don't even bother
+	if (particles_to_render == 0) return nullptr;
 
-	// solve for the right hand bounds in homogenous clip space
-	float a2 = DotInvW(invClip[3], invClip[3]);
-	float b2 = -2.0f * DotInvW(invClip[1], invClip[3]);
-	float c2 = DotInvW(invClip[1], invClip[1]);
+	IMesh* mesh = materials->GetRenderContext()->CreateStaticMesh(VERTEX_POSITION | VERTEX_NORMAL | VERTEX_TEXCOORD0_2D, "");
+	CMeshBuilder mesh_builder;
+	mesh_builder.Begin(mesh, MATERIAL_TRIANGLES, particles_to_render);
+	for (int i = start; i < start + particles_to_render; ++i) {
+		int particle_index = data.render_buffer[i];
+		Vector particle_pos = data.particle_positions[particle_index].AsVector3D();
 
-	float ymin;
-	float ymax;
-	solveQuadratic(a2, b2, c2, ymin, ymax);
+		// calculate triangle rotation
+		//Vector forward = (eye_pos - particle_pos).Normalized();
+		Vector forward = (particle_pos - data.eye_pos).Normalized();
+		Vector right = forward.Cross(Vector(0, 0, 1)).Normalized();
+		Vector up = right.Cross(forward);
+		Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };
 
-	Vector4D gl_Position = Vector4D(worldPos.x, worldPos.y, worldPos.z, 1.0);
-	Vector4D gl_TexCoord[4];
-	gl_TexCoord[0] = Vector4D(xmin, xmax, ymin, ymax);
+		for (int i = 0; i < 3; i++) { // Same as above w/o anisotropy warping
+			Vector world_pos = particle_pos + local_pos[i] * data.radius;
+			mesh_builder.TexCoord2f(0, u[i], v[i]);
+			mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
+			mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
+			mesh_builder.AdvanceVertex();
+		}
+	}
+	mesh_builder.End();
 
-	// construct inverse quadric matrix (used for ray-casting in parameter space)
-	Vector4D invq[4];
-	invq[0] = Vector4D(q1.x / q1.w, q1.y / q1.w, q1.z / q1.w, 0.0);
-	invq[1] = Vector4D(q2.x / q2.w, q2.y / q2.w, q2.z / q2.w, 0.0);
-	invq[2] = Vector4D(q3.x / q3.w, q3.y / q3.w, q3.z / q3.w, 0.0);
-	invq[3] = Vector4D(0.0, 0.0, 0.0, 1.0);
+	return mesh;
+}
 
-	//invq = transpose(invq);
-	//invq[3] = -(invq * //gl_Position);
+// Builds meshes of diffuse particles (scaled by velocity, buffer shoved inside ani0)
+IMesh* _build_diffuse(int id, FlexRendererThreadData data) {
+	int start = id * MAX_PRIMATIVES;
+	int end = min((id + 1) * MAX_PRIMATIVES, data.max_particles);
 
-	// transform a point from view space to parameter space
-	//invq = invq * gl_ModelViewMatrixInverse;
+	// We need to figure out how many and which particles are going to be rendered
+	int particles_to_render = 0;
+	for (int particle_index = start; particle_index < end; ++particle_index) {
+		Vector particle_pos = data.particle_positions[particle_index].AsVector3D();
 
-	// pass down
-	gl_TexCoord[1] = invq[0];
-	gl_TexCoord[2] = invq[1];
-	gl_TexCoord[3] = invq[2];
-	gl_TexCoord[4] = invq[3];
+		// Frustrum culling
+		Vector4D dst;
+		Vector4DMultiply(data.view_projection_matrix, Vector4D(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH, 1), dst);
+		if (dst.z < 0 || -dst.x - dst.w > 0 || dst.x - dst.w > 0 || -dst.y - dst.w > 0 || dst.y - dst.w > 0) continue;
 
-	// compute ndc pos for frustrum culling in GS
-	Vector4D ndcPos;// = gl_ModelViewProjectionMatrix * vec4(worldPos.xyz, 1.0);
-	gl_TexCoord[5] = ndcPos / ndcPos.w;
+		// PVS Culling
+		if (!engine->IsBoxVisible(Vector(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH), Vector(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH))) continue;
+
+		// Add to our buffer
+		data.render_buffer[start + particles_to_render] = particle_index;
+		particles_to_render++;
+	}
+
+	// Don't even bother
+	if (particles_to_render == 0) return nullptr;
+
+	float particle_scale = solver->get_parameter("timescale") * (0.0016 * CM_2_INCH);
+	IMesh* mesh = materials->GetRenderContext()->CreateStaticMesh(VERTEX_POSITION | VERTEX_NORMAL | VERTEX_TEXCOORD0_2D, "");
+	CMeshBuilder mesh_builder;
+	mesh_builder.Begin(mesh, MATERIAL_TRIANGLES, particles_to_render);
+	for (int i = start; i < start + particles_to_render; ++i) {
+		int particle_index = data.render_buffer[i];
+		Vector particle_pos = data.particle_positions[particle_index].AsVector3D();
+
+		// calculate triangle rotation
+		//Vector forward = (eye_pos - particle_pos).Normalized();
+		Vector forward = (particle_pos - data.eye_pos).Normalized();
+		Vector right = forward.Cross(Vector(0, 0, 1)).Normalized();
+		Vector up = right.Cross(forward);
+		Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };
+
+		Vector4D ani0 = data.particle_ani0[particle_index];
+		float scalar = data.radius * data.particle_positions[particle_index].w;
+
+		for (int i = 0; i < 3; i++) {
+			Vector pos_ani = local_pos[i];	// Warp based on velocity
+			pos_ani = pos_ani + (data.particle_ani0[particle_index].AsVector3D() * pos_ani.Dot(data.particle_ani0[particle_index].AsVector3D()) * particle_scale).Min(Vector(3, 3, 3)).Max(Vector(-3, -3, -3));
+
+			Vector world_pos = particle_pos + pos_ani * scalar;
+			mesh_builder.TexCoord2f(0, u[i], v[i]);
+			mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
+			mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
+			mesh_builder.AdvanceVertex();
+		}
+	}
+	mesh_builder.End();
+
+	return mesh;
 }
 
 // lord have mercy brothers
-void FlexRenderer::build_water(FlexSolver* solver, float radius) {
-
-	if (solver == nullptr) return;
-
+void FlexRenderer::build_meshes(FlexSolver* flex, float radius, float radius2) {
 	// Clear previous imeshes since they are being rebuilt
-	IMatRenderContext* render_context = materials->GetRenderContext();
-	for (IMesh* mesh : water) {
-		render_context->DestroyStaticMesh(mesh);
-	}
-	water.clear();
-	
-	int max_particles = solver->get_active_particles();
+	destroy_meshes();
+
+	int max_particles = flex->get_active_particles();
 	if (max_particles == 0) return;
+
+	IMatRenderContext* render_context = materials->GetRenderContext();
 
 	// View matrix, used in frustrum culling
 	VMatrix view_matrix, projection_matrix, view_projection_matrix;
 	render_context->GetMatrix(MATERIAL_VIEW, &view_matrix);
 	render_context->GetMatrix(MATERIAL_PROJECTION, &projection_matrix);
 	MatrixMultiply(projection_matrix, view_matrix, view_projection_matrix);
-	
+
 	// Get eye position for sprite calculations
 	Vector eye_pos; render_context->GetWorldSpaceCameraPosition(&eye_pos);
 
-	float u[3] = { 0.5 - SQRT3 / 2, 0.5, 0.5 + SQRT3 / 2};
-	float v[3] = { 1, -0.5, 1 };
+	Vector4D* particle_positions = flex->get_parameter("smoothing") != 0 ? (Vector4D*)flex->get_host("particle_smooth") : (Vector4D*)flex->get_host("particle_pos");
+	Vector4D* particle_ani0 = (Vector4D*)flex->get_host("particle_ani0");
+	Vector4D* particle_ani1 = (Vector4D*)flex->get_host("particle_ani1");
+	Vector4D* particle_ani2 = (Vector4D*)flex->get_host("particle_ani2");
+	bool particle_ani = flex->get_parameter("anisotropy_scale") != 0;	// Should we do anisotropy calculations?
 
-	Vector4D* particle_positions = solver->get_parameter("smoothing") != 0 ? (Vector4D*)solver->get_host("particle_smooth") : (Vector4D*)solver->get_host("particle_pos");
-	Vector4D* particle_ani1 = (Vector4D*)solver->get_host("particle_ani1");
-	Vector4D* particle_ani2 = (Vector4D*)solver->get_host("particle_ani2");
-	Vector4D* particle_ani3 = (Vector4D*)solver->get_host("particle_ani3");
-	bool particle_ani = solver->get_parameter("anisotropy_scale") != 0;
+	// Water particles
+	int max_meshes = min(ceil(max_particles / (float)MAX_PRIMATIVES), allocated);
+	for (int mesh_index = 0; mesh_index < max_meshes; mesh_index++) {
+		// update thread data
+		FlexRendererThreadData data;
+		data.eye_pos = eye_pos;
+		data.view_projection_matrix = view_projection_matrix;
+		data.particle_positions = particle_positions;
+		data.max_particles = max_particles;
+		data.radius = radius;
+		data.particle_ani0 = particle_ani0;
+		data.particle_ani1 = particle_ani1;
+		data.particle_ani2 = particle_ani2;
+		data.render_buffer = water_buffer;
 
-	// Create meshes and iterates through particles. We also need to abide by the source limits of 2^15 max vertices per mesh
-	// Does so in this structure:
+		// Launch thread
+		if (particle_ani) {
+			queue[mesh_index] = threads->enqueue(_build_water_anisotropy, mesh_index, data);
+		} else {
+			queue[mesh_index] = threads->enqueue(_build_water, mesh_index, data);
+		}
+	}
 
-	// for (particle through particles) {
-	//	create_mesh()
-	//	for (primative = 0 through maxprimatives) {
-	//    particle++
-	//    if frustrum {continue}
-	//    primative++
-	//  }
-	// }
+	// Diffuse particles
+	max_particles = flex->get_active_diffuse();
+	if (max_particles == 0) return;
 
-	/*Vector forward = Vector(view_matrix[2][0], view_matrix[2][1], view_matrix[2][2]);
-	Vector right = Vector(view_matrix[0][0], view_matrix[0][1], view_matrix[0][2]);
-	Vector up = Vector(view_matrix[1][0], view_matrix[1][1], view_matrix[1][2]);
-	Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };*/
+	Vector4D* diffuse_positions = (Vector4D*)flex->get_host("diffuse_pos");
+	Vector4D* diffuse_velocities = (Vector4D*)flex->get_host("diffuse_vel");
+	float radius_mult = radius2 / flex->get_parameter("diffuse_lifetime");
 
-	CMeshBuilder mesh_builder;
-	for (int particle_index = 0; particle_index < max_particles;) {
-		IMesh* imesh = render_context->CreateStaticMesh(VERTEX_POSITION | VERTEX_NORMAL | VERTEX_TEXCOORD0_2D, "");
-		mesh_builder.Begin(imesh, MATERIAL_TRIANGLES, MAX_PRIMATIVES);
-			for (int primative = 0; primative < MAX_PRIMATIVES && particle_index < max_particles; particle_index++) {
-				Vector particle_pos = particle_positions[particle_index].AsVector3D();
+	max_meshes = min(ceil(max_particles / (float)MAX_PRIMATIVES), allocated);
+	for (int mesh_index = 0; mesh_index < max_meshes; mesh_index++) {
+		// update thread data
+		FlexRendererThreadData data;
+		data.eye_pos = eye_pos;
+		data.view_projection_matrix = view_projection_matrix;
+		data.particle_positions = diffuse_positions;
+		data.max_particles = max_particles;
+		data.radius = radius_mult;
+		data.particle_ani0 = diffuse_velocities;
+		data.render_buffer = diffuse_buffer;
 
-				// Frustrum culling
-				Vector4D dst;
-				Vector4DMultiply(view_projection_matrix, Vector4D(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH, 1), dst);
-				if (dst.z < 0 || -dst.x - dst.w > 0 || dst.x - dst.w > 0 || -dst.y - dst.w > 0 || dst.y - dst.w > 0) {
-					continue;
-				}
-
-				// calculate triangle rotation
-				//Vector forward = (eye_pos - particle_pos).Normalized();
-				Vector forward = ((particle_pos * CM_2_INCH) - eye_pos).Normalized();
-				Vector right = forward.Cross(Vector(0, 0, 1)).Normalized();
-				Vector up = right.Cross(forward);
-				Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };
-
-
-				Vector4D aniscale = Vector4D(1, 1, 1, 1/(radius* 2.4));
-				if (particle_ani) {
-					Vector4D ani1 = particle_ani1[particle_index] * aniscale;
-					Vector4D ani2 = particle_ani2[particle_index] * aniscale;
-					Vector4D ani3 = particle_ani3[particle_index] * aniscale;
-
-					for (int i = 0; i < 3; i++) {
-						// Old anisotropy warping (code provided by Spanky)
-						//Vector pos_ani = local_pos[i];
-						//pos_ani = pos_ani + ani1.AsVector3D() * (local_pos[i].Dot(ani1.AsVector3D()) * ani1.w);
-						//pos_ani = pos_ani + ani2.AsVector3D() * (local_pos[i].Dot(ani2.AsVector3D()) * ani2.w);
-						//pos_ani = pos_ani + ani3.AsVector3D() * (local_pos[i].Dot(ani3.AsVector3D()) * ani3.w);
-
-						// New anisotropy warping
-						local_pos[i] *= radius/2.4;
-						float dot1 = local_pos[i].Dot(ani1.AsVector3D());
-						float dot2 = local_pos[i].Dot(ani2.AsVector3D());
-						float dot3 = local_pos[i].Dot(ani3.AsVector3D());
-						Vector pos_ani = local_pos[i] + ani1.AsVector3D() * ani1.w * dot1 + ani2.AsVector3D() * ani2.w * dot2 + ani3.AsVector3D() * ani3.w * dot3;
-
-						Vector world_pos = particle_pos + pos_ani;// *radius;
-						mesh_builder.TexCoord2f(0, u[i], v[i]);
-						mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
-						mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
-						mesh_builder.AdvanceVertex();
-					}
-				} else {
-					for (int i = 0; i < 3; i++) { // Same as above w/o anisotropy warping
-						Vector world_pos = particle_pos + local_pos[i] * radius;
-						mesh_builder.TexCoord2f(0, u[i], v[i]);
-						mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
-						mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
-						mesh_builder.AdvanceVertex();
-					}
-				}
-
-				primative += 1;
-			}
-		mesh_builder.End();
-		mesh_builder.Reset();
-		water.push_back(imesh);
+		// Launch thread
+		queue[mesh_index + allocated] = threads->enqueue(_build_diffuse, mesh_index, data);
 	}
 };
 
-void FlexRenderer::build_diffuse(FlexSolver* solver, float radius) {
-	if (solver == nullptr) return;
-
-	// Clear previous imeshes since they are being rebuilt
+void FlexRenderer::update_meshes() {
 	IMatRenderContext* render_context = materials->GetRenderContext();
-	for (IMesh* mesh : diffuse) {
-		render_context->DestroyStaticMesh(mesh);
-	}	
-	diffuse.clear();
-
-	int max_particles = ((int*)solver->get_host("diffuse_count"))[0];
-	if (max_particles == 0) return;
-
-	// View matrix, used in frustrum culling
-	VMatrix view_matrix, projection_matrix, view_projection_matrix;
-	render_context->GetMatrix(MATERIAL_VIEW, &view_matrix);
-	render_context->GetMatrix(MATERIAL_PROJECTION, &projection_matrix);
-	MatrixMultiply(projection_matrix, view_matrix, view_projection_matrix);
-	
-	// Get eye position for sprite calculations
-	Vector eye_pos; render_context->GetWorldSpaceCameraPosition(&eye_pos);
-
-	float u[3] = { 0.5 - SQRT3 / 2, 0.5, 0.5 + SQRT3 / 2 };
-	float v[3] = { 1, -0.5, 1 };
-	float inv_max_lifetime = 1.f / solver->get_parameter("diffuse_lifetime");
-	float particle_scale = solver->get_parameter("timescale") * (0.0016 * CM_2_INCH);
-
-	Vector4D* particle_positions = (Vector4D*)solver->get_host("diffuse_pos");
-	Vector4D* particle_velocities = (Vector4D*)solver->get_host("diffuse_vel");
-
-	Vector forward = Vector(view_matrix[2][0], view_matrix[2][1], view_matrix[2][2]);
-	Vector right = Vector(view_matrix[0][0], view_matrix[0][1], view_matrix[0][2]);
-	Vector up = Vector(view_matrix[1][0], view_matrix[1][1], view_matrix[1][2]);
-	Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };
-
-	CMeshBuilder mesh_builder;
-	for (int particle_index = 0; particle_index < max_particles;) {
-		IMesh* imesh = render_context->CreateStaticMesh(VERTEX_POSITION | VERTEX_NORMAL | VERTEX_TEXCOORD0_2D, "");
-		mesh_builder.Begin(imesh, MATERIAL_TRIANGLES, MAX_PRIMATIVES);
-		for (int primative = 0; primative < MAX_PRIMATIVES && particle_index < max_particles; particle_index++) {
-			Vector particle_pos = particle_positions[particle_index].AsVector3D();
-
-			// Frustrum culling
-			Vector4D dst;
-			Vector4DMultiply(view_projection_matrix, Vector4D(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH, 1), dst);
-			if (dst.z < 0 || -dst.x - dst.w > 0 || dst.x - dst.w > 0 || -dst.y - dst.w > 0 || dst.y - dst.w > 0) {
-				continue;
-			}
-
-			for (int i = 0; i < 3; i++) {
-				Vector pos_ani = local_pos[i];	// Warp based on velocity
-				Vector vel = particle_velocities[particle_index].AsVector3D();
-				pos_ani = pos_ani + (vel * pos_ani.Dot(vel) * particle_scale).Min(Vector(3, 3, 3)).Max(Vector(-3, -3, -3));
-
-				float lifetime = particle_positions[particle_index].w * inv_max_lifetime;	// scale bubble size by life left
-				Vector world_pos = particle_pos + pos_ani * radius * lifetime;
-
-				// Todo: somehow only apply the rotation stuff to mist
-				//float u1 = ((u[i] - 0.5) * cos(lifetime * 8) + (v[i] - 0.5) * sin(lifetime * 8)) + 0.5;
-				//float v1 = ((u[i] - 0.5) * sin(lifetime * 8) - (v[i] - 0.5) * cos(lifetime * 8)) + 0.5;
-				mesh_builder.TexCoord2f(0, u[i], v[i]);
-				mesh_builder.Position3f(world_pos.x * CM_2_INCH, world_pos.y * CM_2_INCH, world_pos.z * CM_2_INCH);
-				mesh_builder.Normal3f(-forward.x, -forward.y, -forward.z);
-				mesh_builder.AdvanceVertex();
-			}
-
-			primative += 1;
+	for (int mesh = 0; mesh < allocated * 2; mesh++) {
+		if (queue[mesh].valid()) {
+			if (meshes[mesh] != nullptr) render_context->DestroyStaticMesh(meshes[mesh]);
+			meshes[mesh] = queue[mesh].get();
 		}
-		mesh_builder.End();
-		mesh_builder.Reset();
-		diffuse.push_back(imesh);
+	}
+}
+
+void FlexRenderer::draw_water() {
+	update_meshes();	// Update status of water meshes (join threads)
+
+	IMatRenderContext* render_context = materials->GetRenderContext();
+	for (int mesh = 0; mesh < allocated; mesh++) {
+		if (meshes[mesh] == nullptr) continue;
+
+		meshes[mesh]->Draw();
 	}
 };
 
 void FlexRenderer::draw_diffuse() {
-	for (IMesh* mesh : diffuse) { 
-		mesh->Draw();
+	update_meshes();
+
+	IMatRenderContext* render_context = materials->GetRenderContext();
+	for (int mesh = allocated; mesh < allocated * 2; mesh++) {
+		if (meshes[mesh] == nullptr) continue;
+
+		meshes[mesh]->Draw();
 	}
 };
 
-void FlexRenderer::draw_water() {
-	for (IMesh* mesh : water) {
-		mesh->Draw();
+void FlexRenderer::destroy_meshes() {
+	IMatRenderContext* render_context = materials->GetRenderContext();
+	for (int mesh = 0; mesh < allocated * 2; mesh++) {
+		if (meshes[mesh] == nullptr) continue;
+
+		render_context->DestroyStaticMesh(meshes[mesh]);
+		meshes[mesh] = nullptr;
 	}
+}
+
+// Allocate buffers
+FlexRenderer::FlexRenderer(int max_meshes) {
+	allocated = max_meshes;
+
+	// Water meshes take (0 to allocated), diffuse take (allocated to allocated * 2)
+	meshes = (IMesh**)calloc(sizeof(IMesh*), allocated * 2);
+	if (!meshes) return;	// TODO: Fix undefined behavior if this statement runs
+
+	threads = new ThreadPool(allocated * 2);
+
+	queue = (std::future<IMesh*>*)calloc(sizeof(std::future<IMesh*>), allocated * 2);	// Needs to be zero initialized
+	if (!queue) return;
+
+	water_buffer = (int*)malloc(sizeof(int) * allocated * MAX_PRIMATIVES);
+	if (!water_buffer) return;
+
+	diffuse_buffer = (int*)malloc(sizeof(int) * allocated * MAX_PRIMATIVES);
+	if (!diffuse_buffer) return;
 };
 
 FlexRenderer::~FlexRenderer() {
-	IMatRenderContext* render_context = materials->GetRenderContext();
-	for (IMesh* mesh : water) {
-		render_context->DestroyStaticMesh(mesh);
-	}
+	if (meshes == nullptr) return;	// Never allocated (out of ram?)
 
-	for (IMesh* mesh : diffuse) {
-		render_context->DestroyStaticMesh(mesh);
-	}
+	//if (materials->GetRenderContext() == nullptr) return;	// wtf?
+	// Destroy existing meshes
+	destroy_meshes();
+	
+	// Redestroy water that was being built in threads
+	update_meshes();
+	destroy_meshes();
 
-	water.clear();
-	diffuse.clear();
+	delete threads;
+
+	if (water_buffer != nullptr) free(water_buffer);
+	if (diffuse_buffer != nullptr) free(diffuse_buffer);
+	if (meshes != nullptr) free(meshes);
+	if (queue != nullptr) free(queue);
 };

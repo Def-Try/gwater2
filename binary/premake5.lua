@@ -36,6 +36,7 @@ CreateWorkspace({name = "gwater2", abi_compatible = true, path = ""})
 			"BSPParser",
 			"GMFS",
 			"src/sourceengine",
+			"ThreadPool"
 		}
 
 		files {

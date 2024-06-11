@@ -74,7 +74,7 @@ include("gwater2_shaders.lua")
 
 gwater2 = {
 	solver = FlexSolver(100000),
-	renderer = FlexRenderer(),
+	renderer = FlexRenderer(46),
 	new_ticker = true,
 	material = Material("gwater2/finalpass"),--Material("vgui/circle"),--Material("sprites/sent_ball"),
 	update_meshes = function(index, id, rep)
@@ -145,7 +145,7 @@ end
 
 local function gwater_tick2()
 	last_systime = os.clock()
-	--gwater2.solver:ApplyContacts(0.05 * limit_fps, 2, 0)	-- 0.0361 mass of 1 inch cube of water. not sure why i squared it. magic number that works well
+	gwater2.solver:ApplyContacts(limit_fps / FrameTime() * 0.0001, 2, 0)	-- 0.0361 mass of 1 inch cube of water. not sure why i squared it. magic number that works well
 	gwater2.solver:IterateMeshes(gwater2.update_meshes)
 	gwater2.solver:Tick(limit_fps, 0)
 end

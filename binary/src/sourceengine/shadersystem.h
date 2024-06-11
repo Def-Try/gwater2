@@ -30,8 +30,7 @@
 #include "materialsystem/materialsystem_config.h"
 #include "shaderapi/ishaderapi.h"
 #include "materialsystem_global.h"
-#include "tier1/utldict.h"	// Needed for CShaderSystem
-
+#include "tier1/utldict.h"
 
 //-----------------------------------------------------------------------------
 // forward declarations
@@ -61,16 +60,16 @@ enum
 	// lighting flags
 	SHADER_UNLIT					= 0x0000,
 	SHADER_VERTEX_LIT				= 0x0001,
-	SHADER_NEEDS_LIGHTMAP			= 0x0002,
+	SHADER_NEEDS_LIGHTMAP			= 0x0002, 
 	SHADER_NEEDS_BUMPED_LIGHTMAPS	= 0x0004,
 	SHADER_LIGHTING_MASK			= 0x0007,
 */
 
-// opacity flags
-	SHADER_OPACITY_ALPHATEST = 0x0010,
-	SHADER_OPACITY_OPAQUE = 0x0020,
-	SHADER_OPACITY_TRANSLUCENT = 0x0040,
-	SHADER_OPACITY_MASK = 0x0070,
+	// opacity flags
+	SHADER_OPACITY_ALPHATEST		= 0x0010,
+	SHADER_OPACITY_OPAQUE			= 0x0020,
+	SHADER_OPACITY_TRANSLUCENT		= 0x0040,
+	SHADER_OPACITY_MASK				= 0x0070,
 };
 
 
@@ -88,7 +87,7 @@ struct RenderPassList_t
 	int m_nPassCount;
 	StateSnapshot_t	m_Snapshot[MAX_RENDER_PASSES];
 	// per material shader-defined state
-	CBasePerMaterialContextData* m_pContextData[MAX_RENDER_PASSES];
+	CBasePerMaterialContextData *m_pContextData[MAX_RENDER_PASSES];
 };
 
 struct ShaderRenderState_t
@@ -100,7 +99,7 @@ struct ShaderRenderState_t
 	MorphFormat_t	m_MorphFormat;
 
 	// List of all snapshots
-	RenderPassList_t* m_pSnapshots;
+	RenderPassList_t *m_pSnapshots;
 
 
 };
@@ -115,27 +114,33 @@ enum
 	SNAPSHOT_COUNT_EDITOR = 32,
 };
 
+inline int SnapshotTypeCount()
+{
+	return MaterialSystem()->CanUseEditorMaterials() ? SNAPSHOT_COUNT_EDITOR : SNAPSHOT_COUNT_NORMAL;
+}
+
+
 //-----------------------------------------------------------------------------
 // Utility methods
 //-----------------------------------------------------------------------------
-inline void SetFlags(IMaterialVar** params, MaterialVarFlags_t _flag)
+inline void SetFlags( IMaterialVar **params, MaterialVarFlags_t _flag )
 {
-	params[FLAGS]->SetIntValue(params[FLAGS]->GetIntValueFast() | (_flag));
+	params[FLAGS]->SetIntValue( params[FLAGS]->GetIntValueFast() | (_flag) );
 }
 
-inline void SetFlags2(IMaterialVar** params, MaterialVarFlags2_t _flag)
+inline void SetFlags2( IMaterialVar **params, MaterialVarFlags2_t _flag )
 {
-	params[FLAGS2]->SetIntValue(params[FLAGS2]->GetIntValueFast() | (_flag));
+	params[FLAGS2]->SetIntValue( params[FLAGS2]->GetIntValueFast() | (_flag) );
 }
 
-inline bool IsFlagSet(IMaterialVar** params, MaterialVarFlags_t _flag)
+inline bool IsFlagSet( IMaterialVar **params, MaterialVarFlags_t _flag )
 {
-	return ((params[FLAGS]->GetIntValueFast() & (_flag)) != 0);
+	return ((params[FLAGS]->GetIntValueFast() & (_flag) ) != 0);
 }
 
-inline bool IsFlag2Set(IMaterialVar** params, MaterialVarFlags2_t _flag)
+inline bool IsFlag2Set( IMaterialVar **params, MaterialVarFlags2_t _flag )
 {
-	return ((params[FLAGS2]->GetIntValueFast() & (_flag)) != 0);
+	return ((params[FLAGS2]->GetIntValueFast() & (_flag) ) != 0);
 }
 
 
@@ -143,12 +148,12 @@ inline bool IsFlag2Set(IMaterialVar** params, MaterialVarFlags2_t _flag)
 //-----------------------------------------------------------------------------
 // Poll params + renderstate
 //-----------------------------------------------------------------------------
-inline bool	IsTranslucent(const ShaderRenderState_t* pRenderState)
+inline bool	IsTranslucent( const ShaderRenderState_t* pRenderState )
 {
 	return (pRenderState->m_Flags & SHADER_OPACITY_TRANSLUCENT) != 0;
 }
 
-inline bool	IsAlphaTested(ShaderRenderState_t* pRenderState)
+inline bool	IsAlphaTested( ShaderRenderState_t* pRenderState )
 {
 	return (pRenderState->m_Flags & SHADER_OPACITY_ALPHATEST) != 0;
 }
@@ -167,15 +172,15 @@ public:
 	virtual void		ModShutdown() = 0;
 
 	// Methods related to reading in shader DLLs
-	virtual bool		LoadShaderDLL(const char* pFullPath) = 0;
-	virtual void		UnloadShaderDLL(const char* pFullPath) = 0;
+	virtual bool		LoadShaderDLL( const char *pFullPath ) = 0;
+	virtual void		UnloadShaderDLL( const char *pFullPath ) = 0;
 
 	// Find me a shader!
-	virtual IShader* FindShader(char const* pShaderName) = 0;
+	virtual IShader*	FindShader( char const* pShaderName ) = 0;
 
 	// returns strings associated with the shader state flags...
-	virtual char const* ShaderStateString(int i) const = 0;
-	virtual int ShaderStateCount() const = 0;
+	virtual char const* ShaderStateString( int i ) const = 0;
+	virtual int ShaderStateCount( ) const = 0;
 
 	// Rendering related methods
 
@@ -186,29 +191,26 @@ public:
 	virtual void CleanUpDebugMaterials() = 0;
 
 	// Call the SHADER_PARAM_INIT block of the shaders
-	virtual void InitShaderParameters(IShader* pShader, IMaterialVar** params, const char* pMaterialName) = 0;
+	virtual void InitShaderParameters( IShader *pShader, IMaterialVar **params, const char *pMaterialName ) = 0;
 
 	// Call the SHADER_INIT block of the shaders
-	virtual void InitShaderInstance(IShader* pShader, IMaterialVar** params, const char* pMaterialName, const char* pTextureGroupName) = 0;
+	virtual void InitShaderInstance( IShader *pShader, IMaterialVar **params, const char *pMaterialName, const char *pTextureGroupName ) = 0;
 
 	// go through each param and make sure it is the right type, load textures, 
 	// compute state snapshots and vertex types, etc.
-	virtual bool InitRenderState(IShader* pShader, int numParams, IMaterialVar** params, ShaderRenderState_t* pRenderState, char const* pMaterialName) = 0;
+	virtual bool InitRenderState( IShader *pShader, int numParams, IMaterialVar **params, ShaderRenderState_t* pRenderState, char const* pMaterialName ) = 0;
 
 	// When you're done with the shader, be sure to call this to clean up
-	virtual void CleanupRenderState(ShaderRenderState_t* pRenderState) = 0;
+	virtual void CleanupRenderState( ShaderRenderState_t* pRenderState ) = 0;
 
 	// Draws the shader
-	virtual void DrawElements(IShader* pShader, IMaterialVar** params, ShaderRenderState_t* pShaderState, VertexCompressionType_t vertexCompression,
-							   uint32 nMaterialVarTimeStamp) = 0;
+	virtual void DrawElements( IShader *pShader, IMaterialVar **params, ShaderRenderState_t* pShaderState, VertexCompressionType_t vertexCompression,
+							   uint32 nMaterialVarTimeStamp ) = 0;
 
 	// Used to iterate over all shaders for editing purposes
 	virtual int	 ShaderCount() const = 0;
-	virtual int  GetShaders(int nFirstShader, int nCount, IShader** ppShaderList) const = 0;
+	virtual int  GetShaders( int nFirstShader, int nCount, IShader **ppShaderList ) const = 0;
 };
-
-// Meetric: I just shoved the CShadersystem class in here... hope thats fine
-// Meetric: Also added this since its not defined in tier0/dbg EVEN THOUGH IT SHOULD BE
 
 enum SpewType_t
 {
@@ -221,9 +223,6 @@ enum SpewType_t
 	SPEW_TYPE_COUNT
 };
 
-//-----------------------------------------------------------------------------
-// Implementation of the shader system
-//-----------------------------------------------------------------------------
 class CShaderSystem : public IShaderSystemInternal
 {
 public:
@@ -274,7 +273,7 @@ public:
 	// Used to prevent re-entrant rendering from warning messages
 	void				BufferSpew(SpewType_t spewType, const Color& c, const char* pMsg);
 
-public:	// Meetric: Made this public :)
+public:
 	struct ShaderDLLInfo_t
 	{
 		char* m_pFileName;
@@ -288,7 +287,7 @@ public:	// Meetric: Made this public :)
 		CUtlDict< IShader*, unsigned short >	m_ShaderDict;
 	};
 
-public:	// Meetric: Made this public :)
+private:
 	// hackhack: remove this when VAC2 is online.
 	void VerifyBaseShaderDLL(CSysModule* pModule);
 
@@ -349,7 +348,7 @@ public:	// Meetric: Made this public :)
 
 	int GetModulationSnapshotCount(IMaterialVar** params);
 
-public:	// Meetric: made this public :)
+public:
 	// List of all DLLs containing shaders
 	CUtlVector< ShaderDLLInfo_t > m_ShaderDLLs;
 
@@ -384,5 +383,6 @@ public:	// Meetric: made this public :)
 
 	bool			m_bForceUsingGraphicsReturnTrue;
 };
+
 
 #endif // SHADERSYSTEM_H
