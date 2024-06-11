@@ -36,7 +36,7 @@ IMesh* _build_water_anisotropy(int id, FlexRendererThreadData data) {
 		particles_to_render++;
 	}
 
-	Vector4D aniscale = Vector4D(1, 1, 1, 1/(radius* 2.4));
+	Vector4D aniscale = Vector4D(1, 1, 1, 1/(data.radius* 2.4));
 	// Don't even bother
 	if (particles_to_render == 0) return nullptr;
 
@@ -49,7 +49,7 @@ IMesh* _build_water_anisotropy(int id, FlexRendererThreadData data) {
 
 		// calculate triangle rotation
 		//Vector forward = (eye_pos - particle_pos).Normalized();
-		Vector forward = ((particle_pos * CM_2_INCH) - eye_pos).Normalized();
+		Vector forward = ((particle_pos * CM_2_INCH) - data.eye_pos).Normalized();
 		Vector right = forward.Cross(Vector(0, 0, 1)).Normalized();
 		Vector up = right.Cross(forward);
 		Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };
@@ -60,11 +60,11 @@ IMesh* _build_water_anisotropy(int id, FlexRendererThreadData data) {
 
 		for (int i = 0; i < 3; i++) {
 			// Anisotropy warping (code provided by Spanky) 
-			local_pos[i] *= radius/2.4;
+			local_pos[i] *= data.radius/2.4;
+			float dot0 = local_pos[i].Dot(ani0.AsVector3D());
 			float dot1 = local_pos[i].Dot(ani1.AsVector3D());
 			float dot2 = local_pos[i].Dot(ani2.AsVector3D());
-			float dot3 = local_pos[i].Dot(ani3.AsVector3D());
-			Vector pos_ani = local_pos[i] + ani1.AsVector3D() * ani1.w * dot1 + ani2.AsVector3D() * ani2.w * dot2 + ani3.AsVector3D() * ani3.w * dot3;
+			Vector pos_ani = local_pos[i] + ani0.AsVector3D() * ani0.w * dot0 + ani1.AsVector3D() * ani1.w * dot1 + ani2.AsVector3D() * ani2.w * dot2;
 
 			Vector world_pos = particle_pos + pos_ani;
 			mesh_builder.TexCoord2f(0, u[i], v[i]);
@@ -157,7 +157,7 @@ IMesh* _build_diffuse(int id, FlexRendererThreadData data) {
 	// Don't even bother
 	if (particles_to_render == 0) return nullptr;
 
-	float particle_scale = solver->get_parameter("timescale") * (0.0016 * CM_2_INCH);
+	float particle_scale = 1 * (0.0016 * CM_2_INCH); // Timescale should go here
 	IMesh* mesh = materials->GetRenderContext()->CreateStaticMesh(VERTEX_POSITION | VERTEX_NORMAL | VERTEX_TEXCOORD0_2D, "");
 	CMeshBuilder mesh_builder;
 	mesh_builder.Begin(mesh, MATERIAL_TRIANGLES, particles_to_render);
