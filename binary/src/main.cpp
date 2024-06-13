@@ -603,46 +603,6 @@ LUA_FUNCTION(NewFlexRenderer) {
 	return 1;
 }
 
-// WILL LEAK MEMORY! VERTEX AND INDEX BUFFERS ARE NOT FREED
-LUA_FUNCTION(NewRenderer) {
-	IMatRenderContext* render_context = materials->GetRenderContext();
-	IIndexBuffer* index_buffer = render_context->CreateStaticIndexBuffer(MATERIAL_INDEX_FORMAT_32BIT, 3, "");
-	IVertexBuffer* vertex_buffer = render_context->CreateStaticVertexBuffer(MATERIAL_VERTEX_FORMAT_MODEL, 3, "");
-
-	CIndexBuilder index_builder;
-	index_builder.Begin(index_buffer, 3, 0);
-	index_builder.FastTriangle(0);
-	index_builder.End();
-
-	CVertexBuilder vertex_builder;
-	vertex_builder.Begin(vertex_buffer, 3);
-	vertex_builder.Position3f(0, 0, 0);
-	vertex_builder.Normal3f(0, 0, 1);
-	vertex_builder.Color4f(1, 1, 1, 1);
-	vertex_builder.AdvanceVertex();
-	vertex_builder.Position3f(100, 0, 0);
-	vertex_builder.Normal3f(0, 0, 1);
-	vertex_builder.Color4f(1, 1, 1, 1);
-	vertex_builder.AdvanceVertex();
-	vertex_builder.Position3f(0, 100, 0);
-	vertex_builder.Normal3f(0, 0, 1);
-	vertex_builder.Color4f(1, 1, 1, 1);
-	vertex_builder.AdvanceVertex();
-	vertex_builder.End();
-
-	render_context->BindVertexBuffer(0, vertex_buffer, vertex_builder.Offset(), 0, vertex_builder.TotalVertexCount(), MATERIAL_VERTEX_FORMAT_MODEL);
-	render_context->BindIndexBuffer(index_buffer, index_builder.Offset());
-	render_context->Draw(MATERIAL_TRIANGLES, 0, 3);
-	render_context->EndBatch();
-
-	return 0;
-}
-
-LUA_FUNCTION(EjectShaders) {
-	LUA->PushBool(eject_shaders());
-	return 1;
-}
-
 // `mat_antialias 0` but shit
 /*LUA_FUNCTION(SetMSAAEnabled) {
 	MaterialSystem_Config_t config = materials->GetCurrentConfigForVideoCard();
@@ -738,8 +698,6 @@ GMOD_MODULE_OPEN() {
 	LUA->PushSpecial(SPECIAL_GLOB);
 	ADD_FUNCTION(LUA, NewFlexSolver, "FlexSolver");
 	ADD_FUNCTION(LUA, NewFlexRenderer, "FlexRenderer");
-	ADD_FUNCTION(LUA, NewRenderer, "NewRenderer");
-	ADD_FUNCTION(LUA, EjectShaders, "EjectShaders");
 	LUA->Pop();
 
 	// Get serverside physics objects from client DLL. Since server.dll exists in memory, we can find it and avoid networking.

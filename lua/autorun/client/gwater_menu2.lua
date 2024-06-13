@@ -546,7 +546,7 @@ concommand.Add("gwater2_menu", function()
 		presets:AddChoice("Glue", "Color:230 230 230 255\nCohesion:0.03\nAdhesion:0.1\nViscosity:10\nSurface Tension:\nFluid Rest Distance:")	-- yeah sure.. "glue"...
 		presets:AddChoice("Lava", "Color:255 210 0 200\nCohesion:0.1\nAdhesion:0.01\nViscosity:10\nSurface Tension:\nFluid Rest Distance:")
 		presets:AddChoice("Oil", "Color:0 0 0 255\nCohesion:0\nAdhesion:0\nViscosity:0\nSurface Tension:0\nFluid Rest Distance:")
-		presets:AddChoice("Goop", "Color:170 240 140 50\nCohesion:1\nAdhesion:0.1\nViscosity:0\nSurface Tension:0.25\nFluid Rest Distance:")
+		presets:AddChoice("Goop", "Color:170 240 140 50\nCohesion:0.1\nAdhesion:0.1\nViscosity:10\nSurface Tension:0.25\nFluid Rest Distance:")
 
 		presets:AddChoice("Portal Gel (Blue)", "Color:0 127 255 255\nCohesion:0.1\nAdhesion:0.3\nViscosity:10\nSurface Tension:0.5\nFluid Rest Distance:")
 		presets:AddChoice("Portal Gel (Orange)", "Color:255 127 0 255\nCohesion:0.1\nAdhesion:0.3\nViscosity:10\nSurface Tension:0.5\nFluid Rest Distance:")

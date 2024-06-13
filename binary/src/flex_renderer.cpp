@@ -26,7 +26,7 @@ IMesh* _build_water_anisotropy(int id, FlexRendererThreadData data) {
 		// Frustrum culling
 		Vector4D dst;
 		Vector4DMultiply(data.view_projection_matrix, Vector4D(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH, 1), dst);
-		if (dst.z < 0 || -dst.x - dst.w > 0 || dst.x - dst.w > 0 || -dst.y - dst.w > 0 || dst.y - dst.w > 0) continue;
+		if (dst.z < data.radius || -dst.x - dst.w > data.radius * CM_2_INCH || dst.x - dst.w > data.radius * CM_2_INCH || -dst.y - dst.w > data.radius * CM_2_INCH || dst.y - dst.w > data.radius * CM_2_INCH) continue;
 
 		// PVS Culling
 		if (!engine->IsBoxVisible(Vector(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH), Vector(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH))) continue;
@@ -95,7 +95,7 @@ IMesh* _build_water(int id, FlexRendererThreadData data) {
 		// Frustrum culling
 		Vector4D dst;
 		Vector4DMultiply(data.view_projection_matrix, Vector4D(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH, 1), dst);
-		if (dst.z < 0 || -dst.x - dst.w > 0 || dst.x - dst.w > 0 || -dst.y - dst.w > 0 || dst.y - dst.w > 0) continue;
+		if (dst.z < data.radius || -dst.x - dst.w > data.radius * CM_2_INCH || dst.x - dst.w > data.radius * CM_2_INCH || -dst.y - dst.w > data.radius * CM_2_INCH || dst.y - dst.w > data.radius * CM_2_INCH) continue;
 
 		// PVS Culling
 		if (!engine->IsBoxVisible(Vector(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH), Vector(particle_pos.x * CM_2_INCH, particle_pos.y * CM_2_INCH, particle_pos.z * CM_2_INCH))) continue;
