@@ -293,9 +293,10 @@ LUA_FUNCTION(FLEXSOLVER_AddMapMesh) {
 		return 0;
 	}
 
-	free(data);
+	// Map collider
 	flex->add_mesh(mesh);
 
+	free(data);
 	return 0;
 }
 

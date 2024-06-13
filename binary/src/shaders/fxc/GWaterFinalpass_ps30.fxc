@@ -1,28 +1,48 @@
-//  DYNAMIC: "OPAQUE" "0..1"
+// DYNAMIC: "OPAQUE" "0..1"
+// DYNAMIC: "NUM_LIGHTS"				"0..4"
+// STATIC: "FLASHLIGHT"					"0..1"
+// STATIC: "FLASHLIGHTDEPTHFILTERMODE"	"0..2"
 
-#include "common_ps_fxc.h"
+// DYNAMIC: "FLASHLIGHTSHADOWS"			"0..1" 
+
+#include "common_flashlight_fxc.h"
+#include "shader_constant_register_map.h" 
 
 float2 SCR_S		: register(c0);
 float RADIUS		: register(c1);
 float IOR 			: register(c2);
 float REFLECTANCE 	: register(c3);
-float4 COLOR2		: register(c4);
+float4 COLOR2		: register(c12); 	
+
+PixelShaderLightInfo cLightInfo[3]			: register( PSREG_LIGHT_INFO_ARRAY ); // c20 - c25, 2 registers each - 6 registers total (4th light spread across w's)
+const float4 g_ShadowTweaks					: register( c26 ); // PSREG_ENVMAP_TINT__SHADOW_TWEAKS is supposed to be c2, we're using that already, so use c26 instead
+const float4 g_FlashlightAttenuationFactors	: register( PSREG_FLASHLIGHT_ATTENUATION );			// c13, On non-flashlight pass
+const float4 g_FlashlightPos_RimBoost		: register( PSREG_FLASHLIGHT_POSITION_RIM_BOOST ); // c14
+const float4x4 g_FlashlightWorldToTexture	: register( PSREG_FLASHLIGHT_TO_WORLD_TEXTURE ); // c15
+//const float3 cAmbientCube[6]				: register( PSREG_AMBIENT_CUBE ); // c4 - c9
+const float4 g_DiffuseModulation			: register( c11 ); // PSREG_DIFFUSE_MODULATION is supposed to be c2, but we're using that already, so use c11 instead
 
 sampler NORMALS 	: register(s0);
 sampler FRAMEBUFFER : register(s1);
 sampler CUBEMAP		: register(s2);
 sampler DEPTH		: register(s3);
+sampler ShadowDepthSampler		: register( s4 );	// Flashlight shadow depth map sampler
+sampler NormalizeRandRotSampler	: register( s5 );	// Normalization / RandomRotation samplers
+sampler FlashlightSampler		: register( s6 );	// Flashlight cookie
 
 struct PS_INPUT {
 	float2 P 			: VPOS;
 	float2 coord		: TEXCOORD0;
 	float3 view_dir		: TEXCOORD1;
 	float3 pos			: TEXCOORD2;
-	float4x4 proj		: TEXCOORD3;
+	float4x4 proj		: TEXCOORD3; 
+	float4 lightAtten	: TEXCOORD8; // Scalar light attenuation factors for FOUR lights
 };
 
 #define OFFSET float2(0.5, 0.5)
 #define SUN_DIR float3(-0.377821, 0.520026, 0.766044)	// TODO: get from map OR get lighting data
+
+#define g_FlashlightPos					g_FlashlightPos_RimBoost.xyz
 
 bool is_zero(float3 i) {
 	return i.x == 0 && i.y == 0 && i.z == 0;
@@ -52,6 +72,7 @@ float fresnel_approx(float n1, float n2, float3 normal, float3 incident, float r
         return ret % 1.0;
 }
 
+ 
 
 float4 main(const PS_INPUT i) : COLOR {
 	// kill pixels outside of sphere
@@ -59,40 +80,116 @@ float4 main(const PS_INPUT i) : COLOR {
 	float radius2 = dot(offset, offset);
 	if (radius2 > 1) discard;
 
+	float3 diffuseLighting = float3(0.0f, 0.0f, 0.0f);
+	float3 ambientLighting = float3(0.0f, 0.0f, 0.0f);
+    float3 specularLighting = float3(0.0f, 0.0f, 0.0f);
+
 	float3 smoothed_normal = tex2D(NORMALS, i.P * SCR_S).xyz;
 	
 	// Weight the normals forward, as the only visible part is facing the player
 	smoothed_normal = normalize(smoothed_normal + i.view_dir * dot(-i.view_dir, smoothed_normal) * REFLECTANCE);
 
+	float3 uv_offset = smoothed_normal * -RADIUS * IOR;
+	float4 uv = mul(float4(i.pos + uv_offset, 1), i.proj); uv.xy /= uv.w; 
+	
+	float4 uvnorefract = mul(float4(i.pos, 1), i.proj); uvnorefract.xy /= uvnorefract.w;
+	float2 projPos = float2(uvnorefract.x / 2.0 + 0.5, 0.5 - uvnorefract.y / 2.0);
+
+	float SpecularExponent = 200;
+
+
+
+	#if FLASHLIGHT
+		// Flashlight lighting
+		float3 diffuseLightingFL = 0;
+		float3 specularLightingFL = 0;
+		float4 flashlightSpacePosition = mul(float4(i.pos, 1.0f), g_FlashlightWorldToTexture);
+		if (flashlightSpacePosition.z > 0) {
+			DoSpecularFlashlight(g_FlashlightPos, i.pos, flashlightSpacePosition, smoothed_normal,
+						g_FlashlightAttenuationFactors.xyz, g_FlashlightAttenuationFactors.w,
+						FlashlightSampler, ShadowDepthSampler, NormalizeRandRotSampler, FLASHLIGHTDEPTHFILTERMODE, FLASHLIGHTSHADOWS, true, projPos,
+						SpecularExponent, i.view_dir * -1, false, FRAMEBUFFER, 0, g_ShadowTweaks,
+
+						// These two values are output
+						diffuseLightingFL, specularLightingFL );
+		}
+
+		//diffuseLighting += diffuseLightingFL;
+		//specularLighting += specularLightingFL;
+		//diffuseLightingFL = pow(diffuseLightingFL, 1.0f / 2.2f);
+		//specularLightingFL = pow(specularLightingFL, 1.0f / 2.2f) * 1.25; // times 1.25 because looks nice and also makes up for some weird distance quirk
+		specularLightingFL = specularLightingFL * 1.25; // times 1.25 because looks nice and also makes up for some weird distance quirk
+		
+		#if OPAQUE // Opaque
+				float3 absorption1 = COLOR2.xyz;// * (1.0 - fresnel); 
+
+				float3 final_color1 = (absorption1 * diffuseLightingFL) + (specularLightingFL);
+	
+		#else // Translucent
+				float3 final_color1 = specularLightingFL;
+		#endif
+				return FinalOutput(float4(final_color1, 1), 0, 0, TONEMAP_SCALE_LINEAR); // For HDR
+		
+	#else
+		//float4 lightAtten = float4(1,1,1,1);
+		// Local lights
+		float3 rimLightingLL;
+		float3 specularLightingLL;
+		PixelShaderDoSpecularLighting( i.pos, smoothed_normal,
+					SpecularExponent, i.view_dir * -1, i.lightAtten,
+					NUM_LIGHTS, cLightInfo, false, 0, false, FRAMEBUFFER, 0, false, 1,
+
+					// Outputs
+					specularLightingLL, rimLightingLL );
+
+		specularLighting += specularLightingLL;
+		
+		//float3 diffuseLightingLL;
+		//diffuseLightingLL = PixelShaderDoLightingLinear( i.pos, smoothed_normal,
+		//	float3( 0.0f, 0.0f, 0.0f ), false, true, i.lightAtten,
+		//	NULL, NormalizeRandRotSampler, NUM_LIGHTS, cLightInfo, true, // First NULL on this line used to be ambientcube, note here if it needs to be added back.
+
+		//	// These are dummy parameters:
+		//	false, 1.0f,
+		//	false, FRAMEBUFFER);
+
+		//diffuseLighting += diffuseLightingLL;
+	#endif
+	
+	float fresnel = fresnel_approx(1.0, 1.333, i.view_dir, smoothed_normal, 0.1); //is_zero(smoothed_normal) ? 0 : fresnel_approx(1.0, 1.333, i.view_dir, smoothed_normal, 0.1);
+
+	diffuseLighting = pow(diffuseLighting, 1.0f/2.2f);
+	specularLighting = pow(specularLighting, 1.0f/2.2f) * 1.25; // times 1.25 because looks nice and also makes up for some weird distance quirk
+
 	// Primary lighting calculations
 	float3 reflected = reflect(i.view_dir, smoothed_normal);
-	float phong = min(pow(max(0, dot(reflected, SUN_DIR)), 100), 1);
-	float fresnel = fresnel_approx(1.0, 1.333, i.view_dir, smoothed_normal, 0.1); //is_zero(smoothed_normal) ? 0 : fresnel_approx(1.0, 1.333, i.view_dir, smoothed_normal, 0.1);
 	float3 specular = (ENV_MAP_SCALE * texCUBE(CUBEMAP, reflected)).xyz * fresnel;
 	//float3 specular = pow(texCUBE(CUBEMAP, reflected).xyz, 1.0 / 2.2) * 3.5 * fresnel;
 
 	// Secondary lighting calculations
 	
+	
 #if OPAQUE // Opaque
-	float3 absorption = COLOR2.xyz;// * (1.0 - fresnel);
+	float3 absorption = COLOR2.xyz;// * (1.0 - fresnel); 
+	//float phong = min(pow(max(0, dot(reflected, SUN_DIR)), 100), 1);
 	float diffuse = dot(smoothed_normal, SUN_DIR) * 0.45 + 0.55;
 
-	float3 final_color = absorption * diffuse  + float3(phong, phong, phong) + specular;
+	float3 final_color = (absorption * diffuse) + (specularLighting + specular);
+	//float3 final_color = (absorption * diffuseLighting) + (specularLighting + specular);
 	
 #else // Translucent
 	// Calculate refraction vector in 3d space and project it to screen
-	float3 uv_offset = smoothed_normal * -RADIUS * IOR;
-	float4 uv = mul(float4(i.pos + uv_offset, 1), i.proj); uv.xy /= uv.w;
 	
 	float2 refract_pos = float2(uv.x / 2.0 + 0.5, 0.5 - uv.y / 2.0);
 	float3 refracted = tex2D(FRAMEBUFFER, refract_pos).xyz * (1.0 - fresnel);
 
+	refracted = refracted / LINEAR_LIGHT_SCALE;
+
 	float absorption_distance = (tex2D(DEPTH, refract_pos).x * 100 - dot(smoothed_normal, i.view_dir) * 10) * COLOR2.w;
 	float3 absorption = exp((COLOR2.xyz - float3(1, 1, 1)) * absorption_distance);	// Beers law
 
-	float3 final_color = absorption * refracted + float3(phong, phong, phong) + specular;
+	float3 final_color = absorption * refracted + specularLighting + specular;// * diffuseLighting;
 #endif
-
 	// Calculate final color & return
-	return FinalOutput(float4(final_color, 1), 0, 0, TONEMAP_SCALE_NONE);	// For HDR
+	return FinalOutput(float4(final_color, 1), 0, 0, TONEMAP_SCALE_LINEAR);	// For HDR
 };

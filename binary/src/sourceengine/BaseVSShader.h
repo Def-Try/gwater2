@@ -337,6 +337,20 @@ private:
 
 };
 
+// Take 0..1 seed and map to (u, v) coordinate to be used in shadow filter jittering...
+FORCEINLINE void CBaseVSShader::HashShadow2DJitter(const float fJitterSeed, float* fU, float* fV)
+{
+	const int nTexRes = 32;
+	int nSeed = fmod(fJitterSeed, 1.0f) * nTexRes * nTexRes;
+
+	int nRow = nSeed / nTexRes;
+	int nCol = nSeed % nTexRes;
+
+	// Div and mod to get an individual texel in the fTexRes x fTexRes grid
+	*fU = nRow / (float)nTexRes;	// Row
+	*fV = nCol / (float)nTexRes;	// Column
+}
+
 FORCEINLINE void SetFlashLightColorFromState(FlashlightState_t const& state, IShaderDynamicAPI* pShaderAPI, int nPSRegister = 28, bool bFlashlightNoLambert = false)
 {
 	// Old code

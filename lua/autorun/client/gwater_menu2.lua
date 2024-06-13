@@ -633,7 +633,7 @@ concommand.Add("gwater2_menu", function()
 		labels[1], sliders["Collision Distance"] = create_slider(scrollPanel, "Collision Distance", 0.1, 1, 2, 50, 315, 55)
 		labels[2], sliders["Fluid Rest Distance"] = create_slider(scrollPanel, "Fluid Rest Distance", 0.55, 0.85, 2, 80, 315, 55)
 		labels[3], sliders["Dynamic Friction"] = create_slider(scrollPanel, "Dynamic Friction", 0, 1, 2, 110, 315, 55)
-		labels[4], sliders["Vorticity Confinement"] = create_slider(scrollPanel, "Vorticity Confinement", 0, 100, 0, 140, 300, 75)
+		labels[4], sliders["Vorticity Confinement"] = create_slider(scrollPanel, "Vorticity Confinement", 0, 200, 0, 140, 300, 75)
 		
 		function scrollPanel:AnimationThink()
 			local mousex, mousey = self:LocalCursorPos()
@@ -1077,8 +1077,8 @@ I DO NOT take responsiblity for any hardware damage this may cause]], "DermaDefa
 	end
 
 	about_tab(tabs)
-    parameter_tab(tabs)
 	adv_parameter_tab(tabs)
+    parameter_tab(tabs)
 	visuals_tab(tabs)
     performance_tab(tabs)
 	patron_tab(tabs)

@@ -1,7 +1,3 @@
-local function screen_plane(x, y, c)
-	return gui.ScreenToVector(x, y):Cross(c)
-end
-
 local function GetRenderTargetGWater(name, mult, depth) 
 	mult = mult or 1
 	return GetRenderTargetEx(name, ScrW() * mult, ScrH() * mult,
@@ -34,6 +30,8 @@ local blur_passes = CreateClientConVar("gwater2_blur_passes", "3", true)
 local blur_scale = CreateClientConVar("gwater2_blur_scale", "1", true)
 local antialias = GetConVar("mat_antialias")
 
+local lightmodel = ClientsideModel( "models/kleiner_animations.mdl", RENDERGROUP_OTHER );
+local lightpos = EyePos()
 -- rebuild meshes every frame (unused atm since PostDrawOpaque is being a bitch)
 --[[
 hook.Add("RenderScene", "gwater2_render", function(eye_pos, eye_angles, fov)
@@ -68,9 +66,24 @@ hook.Add("PreDrawViewModels", "gwater2_render", function(depth, sky, sky3d)	--Pr
 	local water = gwater2.material
 	local radius = gwater2.solver:GetParameter("radius")
 
-	-- Build imeshes for multiple passes
-	local up = EyeAngles():Up()
-	local right = EyeAngles():Right()
+	-- Build imeshes for multiple passes 
+	local forward = EyeAngles():Forward()
+	-- render.SetLightingOrigin(EyePos() + (EyeAngles():Forward() * 128))
+
+	-- HACK HACK! hack to make lighting work properly
+	render.UpdateScreenEffectTexture()	-- _rt_framebuffer is used in refraction shader
+	render.OverrideDepthEnable( true , false )
+	local tr = util.QuickTrace( EyePos(), LocalPlayer():EyeAngles():Forward() * 800, LocalPlayer())
+	local dist = math.min(230, (tr.HitPos - tr.StartPos):Length() / 1.25)
+	lightpos = LerpVector(0.8 * FrameTime(), lightpos, EyePos() + (LocalPlayer():EyeAngles():Forward() * dist))
+	-- print(dist);
+	-- This one sets the cubemap
+	render.Model({model="models/shadertest/envballs.mdl",pos=EyePos(),angle=LocalPlayer():GetRenderAngles()})
+	-- This one takes care of lights
+	render.Model({model="models/shadertest/vertexlit.mdl",pos=lightpos,angle=LocalPlayer():GetRenderAngles()}, lightmodel)
+	render.OverrideDepthEnable( false, true )
+	render.DrawTextureToScreen(cache_screen0)
+	
 	gwater2.renderer:BuildMeshes(gwater2.solver, radius * 0.5, radius * 0.15)
 	--render.SetMaterial(Material("models/props_combine/combine_interface_disp"))
 
@@ -117,7 +130,7 @@ hook.Add("PreDrawViewModels", "gwater2_render", function(depth, sky, sky3d)	--Pr
 		-- Blur X
 		--local scale = (5 - i) * 0.05
 		local scale = (0.25 / i) * blur_scale:GetFloat()
-		water_blur:SetTexture("$normaltexture", cache_normals)	
+		water_blur:SetTexture("$normaltexture", cache_normals)
 		water_blur:SetVector("$scrs", Vector(scale / scrw, 0))
 		render.PushRenderTarget(cache_bloom)	-- Bloom texture resolution is significantly lower than screen res, enabling for a faster blur
 		render.DrawScreenQuad()
@@ -137,6 +150,7 @@ hook.Add("PreDrawViewModels", "gwater2_render", function(depth, sky, sky3d)	--Pr
 	water:SetTexture("$depthtexture", cache_absorption)
 	render.SetMaterial(water)
 	gwater2.renderer:DrawWater()
+	render.RenderFlashlights( function() gwater2.renderer:DrawWater() end )
 
 	render.OverrideAlphaWriteEnable(false, false)
 
