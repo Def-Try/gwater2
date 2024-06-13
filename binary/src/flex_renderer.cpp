@@ -36,7 +36,7 @@ IMesh* _build_water_anisotropy(int id, FlexRendererThreadData data) {
 		particles_to_render++;
 	}
 
-	Vector4D aniscale = Vector4D(1, 1, 1, 1/(data.radius* 2.4));
+	Vector4D aniscale = Vector4D(1, 1, 1, 1/(data.radius/data.anisotropy_downscale));
 
 	// TODO: Try probe a bunch of points in a grid for lighting and blend smoothly between them
 	// Vector colour = engine->GetLightForPoint(particle_pos, false);
@@ -64,7 +64,7 @@ IMesh* _build_water_anisotropy(int id, FlexRendererThreadData data) {
 
 		for (int i = 0; i < 3; i++) {
 			// Anisotropy warping (code provided by Spanky) 
-			local_pos[i] *= data.radius/2.4;
+			local_pos[i] *= data.radius*data.anisotropy_downscale;
 			float dot0 = local_pos[i].Dot(ani0.AsVector3D());
 			float dot1 = local_pos[i].Dot(ani1.AsVector3D());
 			float dot2 = local_pos[i].Dot(ani2.AsVector3D());
@@ -219,6 +219,7 @@ void FlexRenderer::build_meshes(FlexSolver* flex, float radius, float radius2) {
 	Vector4D* particle_ani1 = (Vector4D*)flex->get_host("particle_ani1");
 	Vector4D* particle_ani2 = (Vector4D*)flex->get_host("particle_ani2");
 	bool particle_ani = flex->get_parameter("anisotropy_scale") != 0;	// Should we do anisotropy calculations?
+	float anisotropy_downscale = flex->get_parameter("anisotropy_downscale");
 
 	// Water particles
 	int max_meshes = min(ceil(max_particles / (float)MAX_PRIMATIVES), allocated);
@@ -230,6 +231,7 @@ void FlexRenderer::build_meshes(FlexSolver* flex, float radius, float radius2) {
 		data.particle_positions = particle_positions;
 		data.max_particles = max_particles;
 		data.radius = radius;
+		data.anisotropy_downscale = anisotropy_downscale;
 		data.particle_ani0 = particle_ani0;
 		data.particle_ani1 = particle_ani1;
 		data.particle_ani2 = particle_ani2;

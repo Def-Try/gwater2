@@ -317,7 +317,7 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params->wind[1] = 0.0f;
 	params->wind[2] = 0.0f;
 
-	params->radius = 0.25f;
+	params->radius = 0.20f;
 	params->viscosity = 0.0f;
 	params->dynamicFriction = 0.5f;
 	params->staticFriction = 0.0f;
@@ -405,6 +405,7 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	param_map["substeps"] = new float(3);
 	param_map["timescale"] = new float(1);
 	param_map["coupling"] = new float(0);
+	param_map["anisotropy_downscale"] = new float(0.4);
 
 	// FleX GPU Buffers
 	add_buffer("particle_pos", sizeof(Vector4D), particles);

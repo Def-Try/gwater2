@@ -23,6 +23,7 @@ struct FlexRendererThreadData {
 	int* render_buffer;
 	int max_particles;
 	float radius;
+	float anisotropy_downscale;
 };
 
 class FlexRenderer {

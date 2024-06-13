@@ -51,6 +51,7 @@ local options = {
 	["Anisotropy Min"] = {text = "Controls the minimum size that particles can be."}, 
 	["Anisotropy Max"] = {text = "Controls the maximum size that particles are allowed to stretch between particles."},
 	["Anisotropy Scale"] = {text = "Controls the size of stretching between particles.\n\nMaking this value zero will turn off stretching."},
+	["Anisotropy Downscale"] = {text = "Controls the downsized scale of lone particles."},
 	["Diffuse Threshold"] = {text = "Controls the amount of force required to make a bubble/foam particle."},
 	["Diffuse Lifetime"] = {text = "Controls how long bubbles/foam particles last after being created.\n\nThis is affected by the Timescale parameter.\n\nSetting this to zero will spawn no diffuse particles"},
 
@@ -687,9 +688,10 @@ concommand.Add("gwater2_menu", function()
 		labels[1], sliders["Anisotropy Min"] = create_slider(scrollPanel, "Anisotropy Min", 0, 1, 2, 50, 350, 20)
 		labels[2], sliders["Anisotropy Max"] = create_slider(scrollPanel, "Anisotropy Max", 0, 8, 2, 80, 350, 20)
 		labels[3], sliders["Anisotropy Scale"] = create_slider(scrollPanel, "Anisotropy Scale", 0, 8, 2, 110, 350, 20)
-		labels[4], sliders["Diffuse Threshold"] = create_slider(scrollPanel, "Diffuse Threshold", 1, 500000, 1, 140, 350, 20)
-		labels[5], sliders["Diffuse Lifetime"] = create_slider(scrollPanel, "Diffuse Lifetime", 0, 5, 1, 170, 350, 20)
-		labels[6], sliders["Color"] = create_picker(scrollPanel, "Color", 200)
+		labels[4], sliders["Anisotropy Downscale"] = create_slider(scrollPanel, "Anisotropy Downscale", 0, 1, 2, 140, 310, 60)
+		labels[5], sliders["Diffuse Threshold"] = create_slider(scrollPanel, "Diffuse Threshold", 1, 500000, 1, 170, 350, 20)
+		labels[6], sliders["Diffuse Lifetime"] = create_slider(scrollPanel, "Diffuse Lifetime", 0, 5, 1, 200, 350, 20)
+		labels[7], sliders["Color"] = create_picker(scrollPanel, "Color", 230)
 		
 		function scrollPanel:AnimationThink()
 			local mousex, mousey = self:LocalCursorPos()
