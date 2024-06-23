@@ -11,7 +11,7 @@ if SERVER or !gwater2 then return end
 	-- HALF OF THIS CODE WAS WRITTEN AT 3 AM
 -- THANK YOU FOR COMING TO MY TED TALK
 
-local version = "0.3.1b"
+local version = "0.4b"
 local options = {
 	solver = FlexSolver(1000),
 	tab = CreateClientConVar("gwater2_tab"..version, "1", true),
@@ -32,6 +32,8 @@ local options = {
 	performance_tab_text = "This tab has options which can help and alter your performance.\n\nEach option is colored between green and red to indicate its performance hit.\n\nAll parameters directly impact the GPU.",
 	patron_tab_header = "Patron Tab",
 	patron_tab_text = "This tab has a list of all my patrons.\n\nThe list is sorted in alphabetical order.\n\nIt will be updated routinely until release.",
+	watergun_tab_header = "Water Gun Tab",
+	watergun_tab_text = "These options affect the water pistol.\n\nThis tab is temporary and will be removed in 0.6b.",
 
 	-- Physics Parameters
 	Cohesion = {text = "Controls how well particles hold together.\n\nHigher values make the fluid more solid/rigid, while lower values make it more fluid and loose."},
@@ -62,6 +64,11 @@ local options = {
 	["Depth Fix"] = {text = "Makes particles appear spherical instead of flat, creating a cleaner and smoother water surface.\n\nCauses shader overdraw.\n\nMedium-High performance impact."},
 	["Particle Limit"] = {text = "USE THIS PARAMETER AT YOUR OWN RISK.\n\nChanges the limit of particles.\n\nNote that a higher limit will negatively impact performance even with the same number of particles spawned."},
 	["New Solver"] = {text = "If unchecked, uses the solver used in 0.1b and 0.2b.\n\nThe old solver usually grants better performance, but causes more particle leakage.\n\nI suggest using the old solver when recording."},
+
+	
+	["Size"] = {text = "Size of the box the particles spawn in"},
+	["Density"] = {text = "Density of particles.\n Controls how far apart they are"},
+	["Forward Velocity"] = {text = "The forward facing velocity the particles spawn with"},
 }
 
 -- garry, sincerely... fuck you
@@ -89,9 +96,9 @@ end
 
 local function draw_label(self, w, h) 
 	surface.SetDrawColor(0, 0, 0, 150)
-	surface.DrawRect(0, 0, w - 201, h)
+	surface.DrawRect(0, 0, w, h)
 	surface.SetDrawColor(255, 255, 255)
-	surface.DrawOutlinedRect(0, 0, w - 201, h)
+	surface.DrawOutlinedRect(0, 0, w, h)
 end
 
 surface.CreateFont("GWater2Param", {
@@ -244,14 +251,16 @@ end
 
 local function create_label(self, text, subtext, dock, size)
 	local label = vgui.Create("DLabel", self)
-	label:SetPos(dock, dock)
-	label:SetSize(383, size or 320)
+	label:SetPos(0, dock or 0)
+	label:SetSize(385, size or 329)
 	label:SetText("")
 
 	function label:Paint(w, h)
-		draw.DrawText(text, "GWater2Title", 1, 1, Color(0, 0, 0), TEXT_ALIGN_LEFT)
-		draw.DrawText(text, "GWater2Title", 0, 0, Color(187, 245, 255), TEXT_ALIGN_LEFT)
-		draw.DrawText(subtext, "DermaDefault", 0, 24, Color(187, 245, 255), TEXT_ALIGN_LEFT)
+		draw_label(self, w, h)
+		
+		draw.DrawText(text, "GWater2Title", 6, 6, Color(0, 0, 0), TEXT_ALIGN_LEFT)
+		draw.DrawText(text, "GWater2Title", 5, 5, Color(187, 245, 255), TEXT_ALIGN_LEFT)
+		draw.DrawText(subtext, "DermaDefault", 5, 24, Color(187, 245, 255), TEXT_ALIGN_LEFT)
 	end
 	return label
 end
@@ -260,7 +269,7 @@ end
 local function copy_color(c) return Color(c.r, c.g, c.b, c.a) end
 local function create_picker(self, text, dock)
 	local label = vgui.Create("DLabel", self)
-	label:SetPos(10, dock)
+	label:SetPos(9, dock)
 	label:SetSize(100, 100)
 	label:SetFont("GWater2Param")
 	label:SetText(text)
@@ -408,7 +417,7 @@ concommand.Add("gwater2_menu", function()
 		surface.SetDrawColor(255, 255, 255)
 		surface.DrawOutlinedRect(0, 0, w, h)
 		surface.DrawLine(5, 5, w - 5, h - 5)
-		surface.DrawLine(w - (5 + 1), 5, 5 - 1, h - 5)
+		surface.DrawLine(w - 6, 5, 5 - 1, h - 5)
 	end
 
 	function mainFrame:Paint(w, h)
@@ -466,7 +475,7 @@ concommand.Add("gwater2_menu", function()
 		surface.PlaySound("buttons/button15.wav")
 	end
 
-	input.SetCursorPos(ScrW() / 2 - 80, ScrH() / 2 - 188)
+	input.SetCursorPos(ScrW() / 2 + 20, ScrH() / 2 - 188)
 
 	-- 2d simulation
 	options.solver:Reset()
@@ -477,48 +486,44 @@ concommand.Add("gwater2_menu", function()
     tabsFrame:SetPos(200, 30)
     tabsFrame.Paint = nil
 
+	-- explanation area definition
+	local explanation
+	local explanation_header
+
 	-- used in presets to update menu sliders after selection
 	local sliders = {}
 
     -- the parameter tab, contains settings for the water
     local function parameter_tab(tabs)
         local scrollPanel = vgui.Create("GF_ScrollPanel", tabs)
-		scrollPanel.Paint = draw_label
 
         local scrollEditTab = tabs:AddSheet("Parameters", scrollPanel, "icon16/cog.png").Tab
 		scrollEditTab.Paint = draw_tabs
-		
-		-- explanation area 
-		local explanation = create_explanation(scrollPanel)
-		explanation:SetText(options.parameter_tab_text)
-		local explanation_header = options.parameter_tab_header
-		function explanation:Paint(w, h)
-			self:SetPos(390, scrollPanel:GetVBar():GetScroll())
-			surface.SetDrawColor(0, 0, 0, 150)
-			surface.DrawRect(0, 0, w, h)
-			surface.SetDrawColor(255, 255, 255)
-			surface.DrawOutlinedRect(0, 0, w, h)
-			draw.DrawText(explanation_header, "GWater2Title", 6, 6, Color(0, 0, 0), TEXT_ALIGN_LEFT)
-			draw.DrawText(explanation_header, "GWater2Title", 5, 5, Color(187, 245, 255), TEXT_ALIGN_LEFT)
-		end
 
 		-- parameters
 		local labels = {}
 
-		create_label(scrollPanel, "Physics Parameters", "These parameters directly influence physics.", 5)
-		labels[1], sliders["Radius"] = create_slider(scrollPanel, "Radius", 0.01, 1, 2, 50)
+		create_label(scrollPanel, "Physics Parameters", "These settings directly influence physics.", 0, 270)
+		labels[1], sliders["Adhesion"] = create_slider(scrollPanel, "Adhesion", 0, 0.2, 3, 50)
 		labels[2], sliders["Cohesion"] = create_slider(scrollPanel, "Cohesion", 0, 2, 3, 80)
-		labels[3], sliders["Adhesion"] = create_slider(scrollPanel, "Adhesion", 0, 0.2, 3, 110)
+		labels[3], sliders["Radius"] = create_slider(scrollPanel, "Radius", 0.01, 1, 2, 110)
 		labels[4], sliders["Gravity"] = create_slider(scrollPanel, "Gravity", -30.48, 30.48, 2, 140)
 		labels[5], sliders["Viscosity"] = create_slider(scrollPanel, "Viscosity", 0, 20, 2, 170)
-		labels[6], sliders["Timescale"] = create_slider(scrollPanel, "Timescale", 0, 2, 2, 200)
-		labels[7], sliders["Surface Tension"] = create_slider(scrollPanel, "Surface Tension", 0, 50, 2, 230, 350, 10)
+		labels[6], sliders["Surface Tension"] = create_slider(scrollPanel, "Surface Tension", 0, 1, 2, 200, 350, 10)
+		labels[7], sliders["Timescale"] = create_slider(scrollPanel, "Timescale", 0, 2, 2, 230)
+
+		create_label(scrollPanel, "Advanced Physics Parameters", "More technical settings.", 275, 265)
+		labels[8], sliders["Collision Distance"] = create_slider(scrollPanel, "Collision Distance", 0.1, 1, 2, 327, 315, 55)
+		labels[9], sliders["Fluid Rest Distance"] = create_slider(scrollPanel, "Fluid Rest Distance", 0.55, 0.85, 2, 357, 315, 55)
+		labels[10], sliders["Dynamic Friction"] = create_slider(scrollPanel, "Dynamic Friction", 0, 1, 2, 385, 317, 55)
+		labels[11], sliders["Vorticity Confinement"] = create_slider(scrollPanel, "Vorticity Confinement", 0, 200, 0, 417, 300, 75)
 		
 		function scrollPanel:AnimationThink()
 			local mousex, mousey = self:LocalCursorPos()
 			local text_name = nil
 			for _, label in pairs(labels) do
 				local x, y = label:GetPos()
+				y = y - self:GetVBar():GetScroll()
 				local w, h = 345, 22
 				if y >= -20 and mousex > x and mousey > y and mousex < x + w and mousey < y + h then
 					label:SetColor(Color(177, 255, 154))
@@ -552,7 +557,7 @@ concommand.Add("gwater2_menu", function()
 		presets:AddChoice("Portal Gel (Blue)", "Color:0 127 255 255\nCohesion:0.1\nAdhesion:0.3\nViscosity:10\nSurface Tension:0.5\nFluid Rest Distance:")
 		presets:AddChoice("Portal Gel (Orange)", "Color:255 127 0 255\nCohesion:0.1\nAdhesion:0.3\nViscosity:10\nSurface Tension:0.5\nFluid Rest Distance:")
 
-		presets:AddChoice("Soapy Water", "Color:215 240 255 20\nCohesion:\nAdhesion:\nViscosity:\nSurface Tension:0.001\nFluid Rest Distance:\nDiffuse Threshold:30\nDiffuse Lifetime:20")
+		//presets:AddChoice("Soapy Water", "Color:215 240 255 20\nCohesion:\nAdhesion:\nViscosity:\nSurface Tension:0.001\nFluid Rest Distance:\nDiffuse Threshold:30\nDiffuse Lifetime:20")
 
 		presets:AddChoice("(Default) Water", "Color:\nCohesion:\nAdhesion:\nViscosity:\nSurface Tension:\nFluid Rest Distance:")
 
@@ -607,90 +612,22 @@ concommand.Add("gwater2_menu", function()
 		end
     end
 
-	local function adv_parameter_tab(tabs)
-        local scrollPanel = vgui.Create("GF_ScrollPanel", tabs)
-		scrollPanel.Paint = draw_label
-
-        local scrollEditTab = tabs:AddSheet("Adv. Parameters", scrollPanel, "icon16/cog_add.png").Tab
-		scrollEditTab.Paint = draw_tabs
-		
-		-- explanation area 
-		local explanation = create_explanation(scrollPanel)
-		explanation:SetText(options.parameter_tab_text)
-		local explanation_header = options.parameter_tab_header
-		function explanation:Paint(w, h)
-			self:SetPos(390, scrollPanel:GetVBar():GetScroll())
-			surface.SetDrawColor(0, 0, 0, 150)
-			surface.DrawRect(0, 0, w, h)
-			surface.SetDrawColor(255, 255, 255)
-			surface.DrawOutlinedRect(0, 0, w, h)
-			draw.DrawText(explanation_header, "GWater2Title", 6, 6, Color(0, 0, 0), TEXT_ALIGN_LEFT)
-			draw.DrawText(explanation_header, "GWater2Title", 5, 5, Color(187, 245, 255), TEXT_ALIGN_LEFT)
-		end
-
-		-- parameters
-		local labels = {}
-		create_label(scrollPanel, "Advanced Parameters", "These parameters also directly influence physics.", 5)
-		labels[1], sliders["Collision Distance"] = create_slider(scrollPanel, "Collision Distance", 0.1, 1, 2, 50, 315, 55)
-		labels[2], sliders["Fluid Rest Distance"] = create_slider(scrollPanel, "Fluid Rest Distance", 0.55, 0.85, 2, 80, 315, 55)
-		labels[3], sliders["Dynamic Friction"] = create_slider(scrollPanel, "Dynamic Friction", 0, 1, 2, 110, 315, 55)
-		labels[4], sliders["Vorticity Confinement"] = create_slider(scrollPanel, "Vorticity Confinement", 0, 200, 0, 140, 300, 75)
-		
-		function scrollPanel:AnimationThink()
-			local mousex, mousey = self:LocalCursorPos()
-			local text_name = nil
-			for _, label in pairs(labels) do
-				local x, y = label:GetPos()
-				local w, h = 345, 22
-				if y >= -20 and mousex > x and mousey > y and mousex < x + w and mousey < y + h then
-					label:SetColor(Color(177, 255, 154))
-					text_name = label:GetText()
-				else
-					label:SetColor(Color(255, 255, 255))
-				end
-			end
-
-			if text_name then
-				explanation:SetText(options[text_name].text)
-				explanation_header = text_name
-			else
-				explanation:SetText(options.adv_parameter_tab_text)
-				explanation_header = options.adv_parameter_tab_header
-			end
-		end
-    end
-
 	-- the parameter tab, contains settings for the water
     local function visuals_tab(tabs)
         local scrollPanel = vgui.Create("GF_ScrollPanel", tabs)
-		scrollPanel.Paint = draw_label
 
         local scrollEditTab = tabs:AddSheet("Visuals", scrollPanel, "icon16/picture.png").Tab
 		scrollEditTab.Paint = draw_tabs
-		
-		-- explanation area 
-		local explanation = create_explanation(scrollPanel)
-		explanation:SetText(options.visuals_tab_text)
-		local explanation_header = options.visuals_tab_header
-		function explanation:Paint(w, h)
-			self:SetPos(390, scrollPanel:GetVBar():GetScroll())
-			surface.SetDrawColor(0, 0, 0, 150)
-			surface.DrawRect(0, 0, w, h)
-			surface.SetDrawColor(255, 255, 255)
-			surface.DrawOutlinedRect(0, 0, w, h)
-			draw.DrawText(explanation_header, "GWater2Title", 6, 6, Color(0, 0, 0), TEXT_ALIGN_LEFT)
-			draw.DrawText(explanation_header, "GWater2Title", 5, 5, Color(187, 245, 255), TEXT_ALIGN_LEFT)
-		end
 
 		-- parameters
 		local labels = {}
-		create_label(scrollPanel, "Visual Parameters", "These parameters directly influence visuals.", 5)
-		labels[1], sliders["Anisotropy Min"] = create_slider(scrollPanel, "Anisotropy Min", 0, 1, 2, 50, 350, 20)
-		labels[2], sliders["Anisotropy Max"] = create_slider(scrollPanel, "Anisotropy Max", 0, 8, 2, 80, 350, 20)
-		labels[3], sliders["Anisotropy Scale"] = create_slider(scrollPanel, "Anisotropy Scale", 0, 8, 2, 110, 350, 20)
-		labels[4], sliders["Anisotropy Downscale"] = create_slider(scrollPanel, "Anisotropy Downscale", 0, 1, 2, 140, 310, 60)
-		labels[5], sliders["Diffuse Threshold"] = create_slider(scrollPanel, "Diffuse Threshold", 1, 500000, 1, 170, 350, 20)
-		labels[6], sliders["Diffuse Lifetime"] = create_slider(scrollPanel, "Diffuse Lifetime", 0, 5, 1, 200, 350, 20)
+		create_label(scrollPanel, "Visual Parameters", "These settings directly influence visuals.")
+		labels[1], sliders["Diffuse Threshold"] = create_slider(scrollPanel, "Diffuse Threshold", 1, 500, 1, 50, 350, 20)
+		labels[2], sliders["Diffuse Lifetime"] = create_slider(scrollPanel, "Diffuse Lifetime", 0, 20, 1, 80, 350, 20)
+		labels[3], sliders["Anisotropy Scale"] = create_slider(scrollPanel, "Anisotropy Scale", 0, 2, 2, 110, 350, 20)
+		labels[4], sliders["Anisotropy Downscale"] = create_slider(scrollPanel, "Anisotropy Downscale", 0, 20, 2, 140, 310, 60)
+		labels[5], sliders["Anisotropy Min"] = create_slider(scrollPanel, "Anisotropy Min", -0.1, 1, 2, 170, 350, 20)
+		labels[6], sliders["Anisotropy Max"] = create_slider(scrollPanel, "Anisotropy Max", 0, 2, 2, 200, 350, 20)
 		labels[7], sliders["Color"] = create_picker(scrollPanel, "Color", 230)
 		
 		function scrollPanel:AnimationThink()
@@ -720,24 +657,9 @@ concommand.Add("gwater2_menu", function()
 
     local function performance_tab(tabs)
         local scrollPanel = vgui.Create("GF_ScrollPanel", tabs)
-		scrollPanel.Paint = draw_label
 
         local scrollEditTab = tabs:AddSheet("Performance", scrollPanel, "icon16/application_xp_terminal.png").Tab
 		scrollEditTab.Paint = draw_tabs
-
-		-- explanation area 
-		local explanation = create_explanation(scrollPanel)
-		explanation:SetText(options.performance_tab_text)
-		local explanation_header = options.performance_tab_header
-		function explanation:Paint(w, h)
-			self:SetPos(390, scrollPanel:GetVBar():GetScroll())
-			surface.SetDrawColor(0, 0, 0, 150)
-			surface.DrawRect(0, 0, w, h)
-			surface.SetDrawColor(255, 255, 255)
-			surface.DrawOutlinedRect(0, 0, w, h)
-			draw.DrawText(explanation_header, "GWater2Title", 6, 6, Color(0, 0, 0), TEXT_ALIGN_LEFT)
-			draw.DrawText(explanation_header, "GWater2Title", 5, 5, Color(187, 245, 255), TEXT_ALIGN_LEFT)
-		end
 
 		local colors = {
 			Color(250, 250, 0),
@@ -751,7 +673,7 @@ concommand.Add("gwater2_menu", function()
 
 		local slider
 		local labels = {}
-		create_label(scrollPanel, "Performance Settings", "These settings directly influence performance", 5)
+		create_label(scrollPanel, "Performance Settings", "These settings directly influence performance")
 		-- create_slider(self, text, min, max, decimals, dock, x_offset, length, label_offset_x, reset_offset_x)
 		labels[1] = create_slider(scrollPanel, "Iterations", 1, 10, 0, 50, 410, -50)
 		labels[2] = create_slider(scrollPanel, "Substeps", 1, 10, 0, 80, 410, -50)
@@ -772,8 +694,8 @@ concommand.Add("gwater2_menu", function()
 		slider:SetPos(0, 140)
 		slider:SetSize(330, 20)
 		slider:SetMinMax(1, 1000000)
-		slider:SetValue(gwater2.solver:GetMaxParticles())
 		slider:SetDecimals(0)
+		slider:SetValue(gwater2.solver:GetMaxParticles())
 
 		local button = vgui.Create("DButton", scrollPanel)
 		button:SetPos(355, 140)
@@ -819,7 +741,7 @@ concommand.Add("gwater2_menu", function()
 
 				-- from testing it seems each particle is around 0.8kb so you could probably do some math to figure out the memory required and show it here
 	
-				draw.DrawText("You are about to change the particle limit to \n" .. slider:GetValue() .. ".\nAre you sure?", "GWater2Title", 200, 30, color_white, TEXT_ALIGN_CENTER)
+				draw.DrawText("You are about to change the particle limit to \n" .. math.floor(slider:GetValue()) .. ".\nAre you sure?", "GWater2Title", 200, 30, color_white, TEXT_ALIGN_CENTER)
 				draw.DrawText([[This can be dangerous, because all particles must be allocated on the GPU.
 DO NOT set the limit to a number higher then you think your computer can handle.
 I DO NOT take responsiblity for any hardware damage this may cause]], "DermaDefault", 200, 110, color_white, TEXT_ALIGN_CENTER)
@@ -835,7 +757,6 @@ I DO NOT take responsiblity for any hardware damage this may cause]], "DermaDefa
 			function confirm:DoClick() 
 				gwater2.solver:Destroy()
 				gwater2.solver = FlexSolver(slider:GetValue())
-				gwater2.renderer = FlexRenderer(46)
 				gwater2.reset_solver(true)
 				frame:Close()
 				surface.PlaySound("buttons/button15.wav")
@@ -952,26 +873,12 @@ I DO NOT take responsiblity for any hardware damage this may cause]], "DermaDefa
 
 			Make sure to read the changelog to see what has been updated!
 
-			Changelog (v0.3.1b):
-			- Fixed timescale 0 breaking fluid preview
-			- Removed DRM due to backlash
-
-			Changelog (v0.3b):
-			- Added NPC, player, and ragdoll collisions
-			- Added more fluid parameters
-			- Added visual parameters
-			- Added diffuse particles (bubbles/foam)
-			- Added DRM
-			- Improved (optimized) particle spawning code
-			- Improved surface estimation (smoother water surface)
-			- Improved anisotropy code
-			- Doubled viscosity slider limit
-			- Fixed flashing when spawning particles after changing limits
-			- Fixed 'Depth fix' parameter not saving properly
-			- Fixed a crash when loading into some maps
-			- Fixed menu opening when using e2 editor
-			- Updated patron list
-			- General micro-optimizations and codebase rewrites (performance improvement of ~30% in my testing)
+			Changelog (v0.4b):
+			- Improved diffuse particle fidelity
+			- Improved renderer so it runs on multiple cores (multithreaded)
+			- Added reaction forces (turned off by default)
+			- Added temporary weapons tab in menu
+			- Tweaked settings in menu
 		]])
 		label:SetColor(Color(255, 255, 255))
 		label:SetTextInset(5, 30)
@@ -986,29 +893,40 @@ I DO NOT take responsiblity for any hardware damage this may cause]], "DermaDefa
 
 			draw.DrawText("Welcome to gwater2! (v" .. version .. ")", "GWater2Title", 6, 6, Color(0, 0, 0), TEXT_ALIGN_LEFT)
 			draw.DrawText("Welcome to gwater2! (v" .. version .. ")", "GWater2Title", 5, 5, Color(187, 245, 255), TEXT_ALIGN_LEFT)
-		end
 
-		-- explanation area 
-		local explanation = create_explanation(scrollPanel)
-		explanation:SetText(options.about_tab_text)
-		function explanation:Paint(w, h)
-			self:SetPos(390, scrollPanel:GetVBar():GetScroll())
-			surface.SetDrawColor(0, 0, 0, 150)
-			surface.DrawRect(0, 0, w, h)
-			surface.SetDrawColor(255, 255, 255)
-			surface.DrawOutlinedRect(0, 0, w, h)
-			draw.DrawText(options.about_tab_header, "GWater2Title", 6, 6, Color(0, 0, 0), TEXT_ALIGN_LEFT)
-			draw.DrawText(options.about_tab_header, "GWater2Title", 5, 5, Color(187, 245, 255), TEXT_ALIGN_LEFT)
+			explanation:SetText(options.about_tab_text)
+			explanation_header = options.about_tab_header
 		end
     end
+
+	local function watergun_tab(tabs)
+		local scrollPanel = vgui.Create("DScrollPanel", tabs)
+		local scrollEditTab = tabs:AddSheet("Water Gun", scrollPanel, "icon16/gun.png").Tab
+		scrollEditTab.Paint = draw_tabs
+
+		-- parameters
+		local labels = {}
+		local label = create_label(scrollPanel, "Water Gun", "Settings for the water pistol.")
+		local old = label.Paint
+		label.Paint = function(self, x, y)
+			old(self, x, y)
+			explanation:SetText(options.watergun_tab_text)
+			explanation_header = options.watergun_tab_header
+		end
+
+		labels[1], sliders["Size"] = create_slider(scrollPanel, "Size", 1, 10, 0, 50, 370, 0)
+		labels[2], sliders["Density"] = create_slider(scrollPanel, "Density", 0.5, 5, 1, 80, 370, 0)
+		labels[3], sliders["Forward Velocity"] = create_slider(scrollPanel, "Forward Velocity", 0, 300, 0, 110, 370, 0)
+	end
 
 	local function patron_tab(tabs)
         local scrollPanel = vgui.Create("DScrollPanel", tabs)
         local scrollEditTab = tabs:AddSheet("Patrons", scrollPanel, "icon16/award_star_gold_3.png").Tab
 		scrollEditTab.Paint = draw_tabs
 
-		-- DONT FORGET TO ADD 'Xenthio'
-		-- & Spaghetti Regretti
+		-- Hi - Xenthio
+
+		-- DONT FORGET TO ADD 'Xenthio' 
 		local patrons = file.Read("gwater2_patrons.lua", "LUA") or "<Failed to load patron data!>"
 		local patrons_table = string.Split(patrons, "\n")
 
@@ -1040,19 +958,9 @@ I DO NOT take responsiblity for any hardware damage this may cause]], "DermaDefa
 			for k, v in ipairs(patrons_table) do
 				draw.DrawText(v, "GWater2Param", 6, 150 + k * 20, patron_color, TEXT_ALIGN_LEFT)
 			end
-		end
 
-		-- explanation area 
-		local explanation = create_explanation(scrollPanel)
-		explanation:SetText(options.patron_tab_text)
-		function explanation:Paint(w, h)
-			--self:SetPos(390, scrollPanel:GetVBar():GetScroll())
-			surface.SetDrawColor(0, 0, 0, 150)
-			surface.DrawRect(0, 0, w, h)
-			surface.SetDrawColor(255, 255, 255)
-			surface.DrawOutlinedRect(0, 0, w, h)
-			draw.DrawText(options.patron_tab_header, "GWater2Title", 6, 6, Color(0, 0, 0), TEXT_ALIGN_LEFT)
-			draw.DrawText(options.patron_tab_header, "GWater2Title", 5, 5, Color(187, 245, 255), TEXT_ALIGN_LEFT)
+			explanation:SetText(options.patron_tab_text)
+			explanation_header = options.patron_tab_header
 		end
     end
 
@@ -1074,19 +982,37 @@ I DO NOT take responsiblity for any hardware damage this may cause]], "DermaDefa
 		for k, v in ipairs(self.Items) do
 			if v.Tab == new then
 				options.tab:SetInt(k)
+				break
 			end
 		end
 	end
 
+	-- create tabs in order
 	about_tab(tabs)
-	adv_parameter_tab(tabs)
-    parameter_tab(tabs)
+	watergun_tab(tabs)
+	parameter_tab(tabs)
 	visuals_tab(tabs)
-    performance_tab(tabs)
+	performance_tab(tabs)
 	patron_tab(tabs)
+
+	-- explanation area creation
+	explanation = create_explanation(tabsFrame)
+	explanation_header = options.about_tab_text
+	explanation:SetText(options.about_tab_text)
+	explanation:SetPos(398, 28)
+	function explanation:Paint(w, h)
+		surface.SetDrawColor(0, 0, 0, 150)
+		surface.DrawRect(0, 0, w, h)
+		surface.SetDrawColor(255, 255, 255)
+		surface.DrawOutlinedRect(0, 0, w, h)
+		draw.DrawText(explanation_header, "GWater2Title", 6, 6, Color(0, 0, 0), TEXT_ALIGN_LEFT)
+		draw.DrawText(explanation_header, "GWater2Title", 5, 5, Color(187, 245, 255), TEXT_ALIGN_LEFT)
+	end
 
 	tabs:SetActiveTab(tabs.Items[options.tab:GetInt()].Tab)
 end)
+
+
 
 -- closes menu if mouse presses on the outside
 hook.Add("GUIMousePressed", "gwater2_menuclose", function(mouse_code, aim_vector)
@@ -1097,8 +1023,6 @@ hook.Add("GUIMousePressed", "gwater2_menuclose", function(mouse_code, aim_vector
 	if x < frame_x or x > frame_x + mainFrame:GetWide() or y < frame_y or y > frame_y + mainFrame:GetTall() then
 		mainFrame:Remove()
 	end
-
-	options.mouse_pos = {x, y}
 end)
 
 hook.Add("PopulateToolMenu", "gwater2_menu", function()

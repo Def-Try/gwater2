@@ -42,8 +42,10 @@ hook.Add("RenderScene", "gwater2_render", function(eye_pos, eye_angles, fov)
 end)]]
 
 -- gwater2 shader pipeline
-hook.Add("PreDrawViewModels", "gwater2_render", function(depth, sky, sky3d)	--PreDrawViewModels
+hook.Add("PostDrawOpaqueRenderables", "gwater2_render", function(depth, sky, sky3d)	--PreDrawViewModels
 	if gwater2.solver:GetActiveParticles() < 1 then return end
+
+	if sky3d or render.GetRenderTarget() then return end
 
 	--if EyePos():DistToSqr(LocalPlayer():EyePos()) > 1 then return end	-- bail if skybox is rendering (used in postdrawopaque)
 
@@ -73,19 +75,19 @@ hook.Add("PreDrawViewModels", "gwater2_render", function(depth, sky, sky3d)	--Pr
 
 	-- HACK HACK! hack to make lighting work properly
 	render.PushRenderTarget(cache_screen0)
-	render.DepthRange(1, 1)
+	render.OverrideDepthEnable(true, false)
 	local tr = util.QuickTrace( EyePos(), LocalPlayer():EyeAngles():Forward() * 800, LocalPlayer())
-	local dist = math.min(230, (tr.HitPos - tr.StartPos):Length() / 1.25)
+	local dist = math.min(230, (tr.HitPos - tr.StartPos):Length() / 1.5)
 	lightpos = LerpVector(0.8 * FrameTime(), lightpos, EyePos() + (LocalPlayer():EyeAngles():Forward() * dist))
 	-- print(dist);
 	-- This one sets the cubemap
 	render.Model({model="models/shadertest/envballs.mdl",pos=EyePos(),angle=LocalPlayer():GetRenderAngles()})
 	-- This one takes care of lights
 	render.Model({model="models/shadertest/vertexlit.mdl",pos=lightpos,angle=LocalPlayer():GetRenderAngles()}, lightmodel)
-	render.DepthRange(0, 1)
+	render.OverrideDepthEnable(false, false)
 	render.PopRenderTarget()
 	
-	gwater2.renderer:BuildMeshes(gwater2.solver, radius * 0.5, radius * 0.15)
+	gwater2.renderer:BuildMeshes(gwater2.solver, 0.15)
 	--render.SetMaterial(Material("models/props_combine/combine_interface_disp"))
 
 	render.UpdateScreenEffectTexture()	-- _rt_framebuffer is used in refraction shader

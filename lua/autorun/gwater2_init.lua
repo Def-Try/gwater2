@@ -126,6 +126,9 @@ gwater2 = {
 gwater2["fluid_rest_distance"] = gwater2.solver:GetParameter("fluid_rest_distance") / gwater2.solver:GetParameter("radius")
 gwater2["collision_distance"] = gwater2.solver:GetParameter("collision_distance") / gwater2.solver:GetParameter("radius")
 gwater2["blur_passes"] = 3
+gwater2["size"] = 4
+gwater2["density"] = 1
+gwater2["forward_velocity"] = 100
 
 -- tick particle solver
 local last_systime = os.clock()
@@ -145,7 +148,7 @@ end
 
 local function gwater_tick2()
 	last_systime = os.clock()
-	gwater2.solver:ApplyContacts(limit_fps / FrameTime() * 0.0001, 2, 0)	-- 0.0361 mass of 1 inch cube of water. not sure why i squared it. magic number that works well
+	gwater2.solver:ApplyContacts(limit_fps * 0.05, 3, 0)
 	gwater2.solver:IterateMeshes(gwater2.update_meshes)
 	gwater2.solver:Tick(limit_fps, 0)
 end
@@ -163,6 +166,6 @@ timer.Create("gwater2_tick", limit_fps, 0, function()
 	if !gwater2.new_ticker then return end
 	gwater_tick2()
 end)
-gwater2.reset_solver()
+
 hook.Add("InitPostEntity", "gwater2_addprop", gwater2.reset_solver)
 hook.Add("OnEntityCreated", "gwater2_addprop", function(ent) timer.Simple(0, function() add_prop(ent) end) end)	// timer.0 so data values are setup correctly

@@ -41,7 +41,7 @@ public:
 	void draw_water();
 	void draw_diffuse();
 
-	void build_meshes(FlexSolver* flex, float radius, float radius2);
+	void build_meshes(FlexSolver* flex, float diffuse_radius);
 
 	FlexRenderer(int max_meshes);
 	~FlexRenderer();

@@ -311,7 +311,7 @@ LUA_FUNCTION(FLEXSOLVER_ApplyContacts) {
 	if (UTIL_EntityByIndex == nullptr) return 0;	// not hosting server
 
 	FlexSolver* flex = GET_FLEXSOLVER(1);
-	if (!flex->get_parameter("coupling")) return 0;	// Coupling planes arent being generated.. bail
+	if (flex->get_parameter("coupling") == 0) return 0;	// Coupling planes arent being generated.. bail
 
 	Vector4D* particle_pos = (Vector4D*)flex->get_host("particle_pos");
 	Vector* particle_vel = (Vector*)flex->get_host("particle_vel");
@@ -321,6 +321,9 @@ LUA_FUNCTION(FLEXSOLVER_ApplyContacts) {
 
 	int* contact_count = (int*)flex->get_host("contact_count");
 	int* contact_indices = (int*)flex->get_host("contact_indices");*/
+	
+	//Vector4D* particle_pos = (Vector4D*)NvFlexMap(flex->get_buffer("particle_pos"), eNvFlexMapWait);
+	//Vector* particle_vel = (Vector*)NvFlexMap(flex->get_buffer("particle_vel"), eNvFlexMapWait);
 
 	// mapping planes stops random spazzing, but eats perf
 	Vector4D* contact_vel = (Vector4D*)NvFlexMap(flex->get_buffer("contact_vel"), eNvFlexMapWait);
@@ -380,19 +383,19 @@ LUA_FUNCTION(FLEXSOLVER_ApplyContacts) {
 			// Buoyancy (completely faked. not at all accurate)
 			Vector prop_pos;
 			phys->GetPosition(&prop_pos, NULL);
-			if (plane.z < 0 && contact_pos.z < prop_pos.z + phys->GetMassCenterLocalSpace().z) {
+			if (contact_pos.z < prop_pos.z + phys->GetMassCenterLocalSpace().z) {
 				impact_vel += Vector(0, 0, volume_mul * buoyancy_mul);
 			}
 
 			// Dampening (completely faked. not at all accurate)
 			//Vector prop_vel;
 			//phys->GetVelocityAtPoint(contact_pos, &prop_vel);
-			//impact_vel -= prop_vel * volume_mul * dampening_mul;
+			//impact_vel -= prop_vel * 0.1 * volume_mul;
 
 			// Cap amount of force (vphysics crashes can occur without it)
 			float limit = 100 * phys->GetMass();
 			if (impact_vel.Dot(impact_vel) > limit * limit) {
-				impact_vel = impact_vel.Normalized() * limit;
+				impact_vel = impact_vel.NormalizedSafe(Vector(0, 0, 0)) * limit;
 			}
 
 			phys->ApplyForceOffset(impact_vel, contact_pos);
@@ -537,8 +540,7 @@ LUA_FUNCTION(FLEXRENDERER_BuildMeshes) {
 	LUA->CheckType(1, FLEXRENDERER_METATABLE);
 	LUA->CheckType(2, FLEXSOLVER_METATABLE);
 	LUA->CheckNumber(3);
-	LUA->CheckNumber(4);
-	GET_FLEXRENDERER(1)->build_meshes(GET_FLEXSOLVER(2), LUA->GetNumber(3), LUA->GetNumber(4));
+	GET_FLEXRENDERER(1)->build_meshes(GET_FLEXSOLVER(2), LUA->GetNumber(3));
 
 	return 0;
 }
