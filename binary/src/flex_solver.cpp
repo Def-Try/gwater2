@@ -334,9 +334,9 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params->fluidRestDistance = params->radius * 0.65f;
 	params->solidRestDistance = params->radius * 0.65f;
 
-	params->anisotropyScale = 4.f;
-	params->anisotropyMin = 0.0f;
-	params->anisotropyMax = 4.f;
+	params->anisotropyScale = 1.f;
+	params->anisotropyMin = 0.1f;
+	params->anisotropyMax = 2.f;
 	params->smoothing = 1.0f;
 
 	params->dissipation = 0.f;
@@ -410,7 +410,7 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	param_map["substeps"] = new float(3);
 	param_map["timescale"] = new float(1);
 	param_map["coupling"] = new float(0);
-	param_map["anisotropy_downscale"] = new float(0.4);
+	param_map["anisotropy_downscale"] = new float(10);
 
 	// FleX GPU Buffers
 	add_buffer("particle_pos", sizeof(Vector4D), particles);
@@ -449,9 +449,10 @@ FlexSolver::~FlexSolver() {
 		mesh.destroy(library);
 	meshes.clear();
 
-	delete param_map["substeps"];		// Seperate since its externally stored & not a default parameter
-	delete param_map["timescale"];		// ^
-	delete param_map["coupling"];		// ^
+	delete param_map["substeps"];					// Seperate since its externally stored & not a default parameter
+	delete param_map["timescale"];					// ^
+	delete param_map["coupling"];					// ^
+	delete param_map["anisotropy_downscale"];		// ^
 	delete params;
 	delete copy_description;
 
