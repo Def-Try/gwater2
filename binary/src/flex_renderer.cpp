@@ -119,7 +119,7 @@ IMesh* _build_water(int id, FlexRendererThreadData data) {
 
 		// calculate triangle rotation
 		//Vector forward = (eye_pos - particle_pos).Normalized();
-		Vector forward = (particle_pos - data.eye_pos).Normalized();
+		Vector forward = ((particle_pos * CM_2_INCH) - data.eye_pos).Normalized();
 		Vector right = forward.Cross(Vector(0, 0, 1)).Normalized();
 		Vector up = right.Cross(forward);
 		Vector local_pos[3] = { (-up - right * SQRT3) * 0.5, up, (-up + right * SQRT3) * 0.5 };	
@@ -173,7 +173,7 @@ IMesh* _build_diffuse(int id, FlexRendererThreadData data) {
 
 		// calculate triangle rotation
 		//Vector forward = (eye_pos - particle_pos).Normalized();
-		Vector forward = (particle_pos - data.eye_pos).Normalized();
+		Vector forward = ((particle_pos * CM_2_INCH) - data.eye_pos).Normalized();
 		Vector right = forward.Cross(Vector(0, 0, 1)).Normalized();
 		Vector up = right.Cross(forward);
 		Vector local_pos[3] = { (-up - right * SQRT3), up * 2.0, (-up + right * SQRT3) };
