@@ -66,7 +66,7 @@ function SWEP:SecondaryAttack()
 	local owner = self:GetOwner()
 	local forward = owner:EyeAngles():Forward()
 	local sprite_size = gwater2.solver:GetParameter("fluid_rest_distance")
-	gwater2.solver:AddCube(owner:EyePos() + forward * 40 * sprite_size * 55, forward * 500, Vector(33, 33, 33), sprite_size * 1.5)
+	gwater2.solver:AddCube(owner:EyePos() + forward * 40 * sprite_size * 39.3701, forward * 500, Vector(33, 33, 33), sprite_size * 1)
 end
 
 function SWEP:Reload()
@@ -120,7 +120,7 @@ hook.Add("PostDrawTranslucentRenderables", "gwater2_fuckthisshitman", function()
 		local size = Vector(1, 1, 1) * (gwater2["size"] * 0.5) * (sprite_size * gwater2["density"])
 
 		-- big cube
-		local sprite_size = gwater2.solver:GetParameter("fluid_rest_distance") * 64
+		local sprite_size = gwater2.solver:GetParameter("fluid_rest_distance") * 39.3701
 		local pos2 = owner:EyePos() + forward * 40 * sprite_size
 		local size2 = Vector(16.5, 16.5, 16.5) * sprite_size
 
