@@ -12,7 +12,7 @@ end
 local cache_screen0 = render.GetScreenEffectTexture()
 local cache_screen1 = render.GetScreenEffectTexture(1)
 local cache_depth = GetRenderTargetGWater("1gwater_cache_depth", 1 / 1)
-local cache_absorption = GetRenderTargetGWater("gwater_cache_absorption", 1 / 1, MATERIAL_RT_DEPTH_NONE)
+local cache_absorption = GetRenderTargetGWater("2gwater_cache_absorption", 1 / 2, MATERIAL_RT_DEPTH_NONE)
 local cache_normals = GetRenderTargetGWater("1gwater_cache_normals", 1 / 1, MATERIAL_RT_DEPTH_SEPARATE)
 local cache_bloom = GetRenderTargetGWater("2gwater_cache_bloom", 1 / 2)	-- for blurring
 local water_blur = Material("gwater2/smooth")
@@ -30,7 +30,7 @@ local blur_passes = CreateClientConVar("gwater2_blur_passes", "3", true)
 local blur_scale = CreateClientConVar("gwater2_blur_scale", "1", true)
 local antialias = GetConVar("mat_antialias")
 
-local lightmodel = ClientsideModel( "models/kleiner_animations.mdl", RENDERGROUP_OTHER );
+local lightmodel = ClientsideModel("models/kleiner_animations.mdl", RENDERGROUP_OTHER)
 local lightpos = EyePos()
 -- rebuild meshes every frame (unused atm since PostDrawOpaque is being a bitch)
 --[[[
@@ -73,7 +73,7 @@ hook.Add("PostDrawOpaqueRenderables", "gwater2_render", function(depth, sky, sky
 	local forward = EyeAngles():Forward()
 	-- render.SetLightingOrigin(EyePos() + (EyeAngles():Forward() * 128))
 
-	-- HACK HACK! hack to make lighting work properly
+	-- HACK HACK HACK! Makes lighting work properly in sourceengine
 	render.PushRenderTarget(cache_screen0)
 	render.OverrideDepthEnable(true, false)
 	local tr = util.QuickTrace( EyePos(), LocalPlayer():EyeAngles():Forward() * 800, LocalPlayer())
@@ -105,15 +105,15 @@ hook.Add("PostDrawOpaqueRenderables", "gwater2_render", function(depth, sky, sky
 		gwater2.renderer:DrawWater()
 		render.CopyTexture(render.GetRenderTarget(), cache_absorption)
 		render.DrawTextureToScreen(cache_screen0)
+		
+		-- Bubble particles inside water
+		-- Make sure the water screen texture has bubbles but the normal framebuffer does not
+		render.SetMaterial(water_bubble)
+		render.UpdateScreenEffectTexture(1)
+		gwater2.renderer:DrawDiffuse()
+		render.CopyTexture(render.GetRenderTarget(), cache_screen0)
+		render.DrawTextureToScreen(cache_screen1)
 	end
-	
-	-- Bubble particles inside water
-	-- Make sure the water screen texture has bubbles but the normal framebuffer does not
-	render.SetMaterial(water_bubble)
-	render.UpdateScreenEffectTexture(1)
-	gwater2.renderer:DrawDiffuse()
-	render.CopyTexture(render.GetRenderTarget(), cache_screen0)
-	render.DrawTextureToScreen(cache_screen1)
 
 	-- grab normals
 	water_normals:SetFloat("$radius", radius * (39.3701 / 2))

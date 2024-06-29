@@ -192,8 +192,8 @@ void FlexSolver::tick(float dt) {
 	// read back (async)
 	NvFlexGetParticles(solver, get_buffer("particle_pos"), copy_description);
 	NvFlexGetVelocities(solver, get_buffer("particle_vel"), copy_description);
-	NvFlexGetPhases(solver, get_buffer("particle_phase"), copy_description);
-	NvFlexGetActive(solver, get_buffer("particle_active"), copy_description);
+	//NvFlexGetPhases(solver, get_buffer("particle_phase"), copy_description);
+	//NvFlexGetActive(solver, get_buffer("particle_active"), copy_description);
 	NvFlexGetDiffuseParticles(solver, get_buffer("diffuse_pos"), get_buffer("diffuse_vel"), get_buffer("diffuse_count"));
 	if (get_parameter("coupling") != 0) NvFlexGetContacts(solver, get_buffer("contact_planes"), get_buffer("contact_vel"), get_buffer("contact_indices"), get_buffer("contact_count"));
 	if (get_parameter("anisotropy_scale") != 0) NvFlexGetAnisotropy(solver, get_buffer("particle_ani0"), get_buffer("particle_ani1"), get_buffer("particle_ani2"), copy_description);
@@ -210,7 +210,6 @@ void FlexSolver::add_mesh(FlexMesh mesh) {
 void FlexSolver::remove_mesh(int id) {
 	if (solver == nullptr) return;
 
-	// TODO: Optimize
 	for (int i = meshes.size() - 1; i >= 0; i--) {
 		if (meshes[i].get_entity_id() == id) {
 			// Free mesh buffers

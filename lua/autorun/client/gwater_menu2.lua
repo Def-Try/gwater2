@@ -167,6 +167,8 @@ end
 vgui.Register("GF_ScrollPanel", GFScrollPanel, "DScrollPanel")
 
 local function set_gwater_parameter(option, val)
+
+	-- nondirect options (eg. parameter scales based on radius)
 	if gwater2[option] then
 		gwater2[option] = val
 		if option == "fluid_rest_distance" or option == "collision_distance" then -- hack hack hack! this parameter scales based on radius
@@ -174,6 +176,10 @@ local function set_gwater_parameter(option, val)
 			local r2 = val * math.min(gwater2.solver:GetParameter("radius"), 15)
 			gwater2.solver:SetParameter(option, r1)
 			options.solver:SetParameter(option, r2)
+		elseif option == "cohesion" then	-- also scales by radius
+			local r1 = math.min(val / gwater2.solver:GetParameter("radius") * 10, 1)
+			gwater2.solver:SetParameter(option, r1)
+			options.solver:SetParameter(option, r1)
 		end
 		return
 	end
@@ -184,10 +190,12 @@ local function set_gwater_parameter(option, val)
 	if option == "radius" then 					-- hack hack hack! radius needs to edit multiple parameters! 
 		gwater2.solver:SetParameter("fluid_rest_distance", val * gwater2["fluid_rest_distance"])
 		gwater2.solver:SetParameter("collision_distance", val * gwater2["collision_distance"])
+		gwater2.solver:SetParameter("cohesion", math.min(gwater2["cohesion"] / val * 10, 1))
 		
 		if val > 15 then val = 15 end	-- explody 
 		options.solver:SetParameter("fluid_rest_distance", val * gwater2["fluid_rest_distance"])
 		options.solver:SetParameter("collision_distance", val * gwater2["collision_distance"])
+		options.solver:SetParameter("cohesion", math.min(gwater2["cohesion"] / val * 10, 1))
 	end
 
 	if option != "diffuse_threshold" and option != "dynamic_friction" then -- hack hack hack! fluid preview doesn't use diffuse particles
@@ -874,11 +882,18 @@ I DO NOT take responsiblity for any hardware damage this may cause]], "DermaDefa
 			Make sure to read the changelog to see what has been updated!
 
 			Changelog (v0.4b):
-			- Improved diffuse particle fidelity
-			- Improved renderer so it runs on multiple cores (multithreaded)
-			- Added reaction forces (turned off by default)
+			- Rewrote renderer so it runs on multiple cores (multithreaded, should run faster though it may depend on your hardware)
+			- Added reaction forces
+			- Added swimming
 			- Added temporary weapons tab in menu
+			- Added some padding to the frustrum culling calculations
+			- Added PVS particle culling
+			- Improved lighting calculations (flashlights, lamps, and lights now properly interact with water reflection)
+			- Improved diffuse particle visuals
+			- Improved anisotropy calculations at smaller radii
 			- Tweaked settings in menu
+			- Fixed HDR breaking cubemap reflections
+			- (Properly) Fixed MSAA breaking water reflections
 		]])
 		label:SetColor(Color(255, 255, 255))
 		label:SetTextInset(5, 30)
@@ -926,7 +941,7 @@ I DO NOT take responsiblity for any hardware damage this may cause]], "DermaDefa
 
 		-- Hi - Xenthio
 
-		-- DONT FORGET TO ADD 'Xenthio' 
+		-- DONT FORGET TO ADD 'Xenthio' & 'NecrosVideos'
 		local patrons = file.Read("gwater2_patrons.lua", "LUA") or "<Failed to load patron data!>"
 		local patrons_table = string.Split(patrons, "\n")
 

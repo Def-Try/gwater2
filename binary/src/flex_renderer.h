@@ -9,7 +9,7 @@
 #include "ThreadPool.h"
 
 #define MAX_PRIMATIVES 21845
-#define MAX_THREADS 8
+#define MAX_THREADS 16
 #define SQRT3 1.73205081
 
 struct FlexRendererThreadData {

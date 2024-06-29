@@ -1,8 +1,13 @@
 AddCSLuaFile()
 
+include("gwater2_swimming.lua")
+
 if SERVER then 
 	return 
 end
+
+require((BRANCH == "x86-64" or BRANCH == "chromium" ) and "gwater2" or "gwater2_main")	-- carrying
+include("gwater2_shaders.lua")
 
 -- GetMeshConvexes but for client
 local function unfucked_get_mesh(ent, raw)
@@ -69,9 +74,6 @@ local function get_map_vertices()
 	return all_vertices
 end
 
-require((BRANCH == "x86-64" or BRANCH == "chromium" ) and "gwater2" or "gwater2_main")	-- carrying
-include("gwater2_shaders.lua")
-
 gwater2 = {
 	solver = FlexSolver(100000),
 	renderer = FlexRenderer(46),
@@ -125,6 +127,7 @@ gwater2 = {
 -- setup percentage values (used in menu) 
 gwater2["fluid_rest_distance"] = gwater2.solver:GetParameter("fluid_rest_distance") / gwater2.solver:GetParameter("radius")
 gwater2["collision_distance"] = gwater2.solver:GetParameter("collision_distance") / gwater2.solver:GetParameter("radius")
+gwater2["cohesion"] = gwater2.solver:GetParameter("cohesion") * gwater2.solver:GetParameter("radius") * 0.1	-- cohesion scales by radius, for some reason..
 gwater2["blur_passes"] = 3
 gwater2["size"] = 4
 gwater2["density"] = 1
@@ -137,18 +140,29 @@ local average_frametime = limit_fps
 local function gwater_tick()
 	if gwater2.new_ticker then return end
 
-	local systime = os.clock()
+	-- Defined in C++
+	GWATER2_QuickHackRemoveMeASAP(LocalPlayer():EntIndex(), 0)	-- TODO: REMOVE THIS HACKY SHIT!!!!!!!!!!!!!
+	LocalPlayer().GWATER2_CONTACTS = 0
 
-	if gwater2.solver:Tick(average_frametime, 1) then
+	local systime = os.clock()
+	if gwater2.solver:Tick(limit_fps, 1) then
 	//if gwater2.solver:Tick(1/165, hang_thread and 0 or 1) then
-		average_frametime = average_frametime + ((systime - last_systime) - average_frametime) * 0.03
+		average_frametime = average_frametime + (limit_fps - average_frametime) * 0.03
 		last_systime = systime	// smooth out fps
 	end
 end
 
 local function gwater_tick2()
 	last_systime = os.clock()
-	gwater2.solver:ApplyContacts(limit_fps * 0.05, 3, 0)
+	gwater2.solver:ApplyContacts(limit_fps * 0.01, 3, 0)
+
+	local particles_in_radius = gwater2.solver:GetParticlesInRadius(LocalPlayer():GetPos() + LocalPlayer():OBBCenter(), gwater2.solver:GetParameter("fluid_rest_distance") * 2.5, GWATER2_PARTICLES_TO_SWIM)
+	GWATER2_QuickHackRemoveMeASAP(	-- TODO: REMOVE THIS HACKY SHIT!!!!!!!!!!!!!
+		LocalPlayer():EntIndex(), 
+		particles_in_radius
+	)
+	LocalPlayer().GWATER2_CONTACTS = particles_in_radius
+
 	gwater2.solver:IterateMeshes(gwater2.update_meshes)
 	gwater2.solver:Tick(limit_fps, 0)
 end

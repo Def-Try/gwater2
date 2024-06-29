@@ -26,7 +26,9 @@ public:
 	void destroy(NvFlexLibrary* lib);
 
 	void set_pos(Vector pos);
+	void set_pos(Vector4D pos);
 	void set_ang(QAngle ang);
+	void set_ang(Vector4D ang);
 
 	Vector4D get_pos();	// Returns a Vector4D for convenience
 	Vector4D get_ang();
@@ -41,4 +43,5 @@ public:
 	void update();	// sets the previous position/angle to current position/angle (previous_pos = pos; previous_ang = ang)
 	
 	FlexMesh(int mesh_id);
+	FlexMesh();
 };
