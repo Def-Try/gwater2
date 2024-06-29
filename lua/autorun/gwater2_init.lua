@@ -145,9 +145,9 @@ local function gwater_tick()
 	LocalPlayer().GWATER2_CONTACTS = 0
 
 	local systime = os.clock()
-	if gwater2.solver:Tick(limit_fps, 1) then
+	if gwater2.solver:Tick((systime - last_systime), 1) then
 	//if gwater2.solver:Tick(1/165, hang_thread and 0 or 1) then
-		average_frametime = average_frametime + (limit_fps - average_frametime) * 0.03
+		average_frametime = average_frametime + ((systime - last_systime) - average_frametime) * 0.03
 		last_systime = systime	// smooth out fps
 	end
 end
