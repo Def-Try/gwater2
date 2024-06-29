@@ -183,7 +183,7 @@ IMesh* _build_diffuse(int id, FlexRendererThreadData data) {
 
 		for (int i = 0; i < 3; i++) {
 			Vector pos_ani = local_pos[i];	// Warp based on velocity
-			pos_ani = pos_ani + (data.particle_ani0[particle_index].AsVector3D() * pos_ani.Dot(data.particle_ani0[particle_index].AsVector3D()) * particle_scale).Min(Vector(3, 3, 3)).Max(Vector(-3, -3, -3));
+			pos_ani = pos_ani + (data.particle_ani0[particle_index].AsVector3D() * pos_ani.Dot(data.particle_ani0[particle_index].AsVector3D()) * particle_scale).Min(Vector(100, 100, 100)).Max(Vector(-100, -100, -100));
 
 			Vector world_pos = particle_pos + pos_ani * scalar;
 			mesh_builder.TexCoord2f(0, u[i], v[i]);
