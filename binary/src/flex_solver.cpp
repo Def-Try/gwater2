@@ -355,7 +355,7 @@ FlexSolver::FlexSolver(NvFlexLibrary* library, int particles) {
 	params->adhesion = 0.0f;
 	params->cohesion = 0.05f;
 	params->surfaceTension = 0.1f;
-	params->vorticityConfinement = 10.0f;
+	params->vorticityConfinement = 1.0f;
 	params->buoyancy = 1.0f;
 
 	params->diffuseThreshold = 60000.0f;
