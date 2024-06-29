@@ -630,7 +630,7 @@ concommand.Add("gwater2_menu", function()
 		-- parameters
 		local labels = {}
 		create_label(scrollPanel, "Visual Parameters", "These settings directly influence visuals.")
-		labels[1], sliders["Diffuse Threshold"] = create_slider(scrollPanel, "Diffuse Threshold", 1, 500, 1, 50, 350, 20)
+		labels[1], sliders["Diffuse Threshold"] = create_slider(scrollPanel, "Diffuse Threshold", 1, 100000, 1, 50, 350, 20)
 		labels[2], sliders["Diffuse Lifetime"] = create_slider(scrollPanel, "Diffuse Lifetime", 0, 20, 1, 80, 350, 20)
 		labels[3], sliders["Anisotropy Scale"] = create_slider(scrollPanel, "Anisotropy Scale", 0, 2, 2, 110, 350, 20)
 		labels[4], sliders["Anisotropy Downscale"] = create_slider(scrollPanel, "Anisotropy Downscale", 0, 20, 2, 140, 310, 60)
