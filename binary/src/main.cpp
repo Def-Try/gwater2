@@ -503,7 +503,7 @@ LUA_FUNCTION(FLEXSOLVER_InitBounds) {
 	FlexSolver* flex = GET_FLEXSOLVER(1);
 
 	if (LUA->GetType(2) == Type::Vector && LUA->GetType(3) == Type::Vector) {
-		flex->enable_bounds(LUA->GetVector(2), LUA->GetVector(3));
+		flex->enable_bounds(LUA->GetVector(2) / CM_2_INCH, LUA->GetVector(3) / CM_2_INCH);
 	} else {
 		flex->disable_bounds();
 	}
