@@ -32,7 +32,9 @@ Watermarking this bot does is simply appending 8 bytes of downloader discord id 
 - garrysmod/lua/bin/gmcl_gwater2_main_win32.dll
 - garrysmod/lua/bin/gmcl_gwater2_win32.dll
 - garrysmod/lua/bin/gmcl_gwater2_win64.dll
+  
 These are the files that get watermarked and if any of these don't exist, the download will fail.
+
 Most of bot configuration is stored in `config/` directory and is dictated by 5 files.
 - admins.json: admins user ids list
 - blacklist.json: blacklisted user ids list. changed by bot with some commands!
@@ -40,6 +42,7 @@ Most of bot configuration is stored in `config/` directory and is dictated by 5 
 - meeid.txt: meetric's user id
 - patrons.json: patrons role ids file
 - token.txt: discord bot token
+  
 Some of the configuration, however, needs to be changed in main.py directly:
 - TEST_MODE: Is bot in test mode? True means that no UID checks will be done.
 - COOLDOWN: How much should we wait before letting user to generate new download? In seconds.
